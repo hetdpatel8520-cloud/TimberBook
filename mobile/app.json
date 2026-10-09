@@ -1,0 +1,44 @@
+{
+  "expo": {
+    "name": "TimberBooks",
+    "slug": "timberbooks",
+    "version": "1.0.1",
+    "orientation": "default",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#102A43"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSFaceIDUsageDescription": "TimberBooks uses Face ID to securely unlock your timber accounts."
+      }
+    },
+    "android": {
+      "package": "com.timberbooks.app",
+      "versionCode": 2,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#102A43"
+      },
+      "permissions": [
+        "USE_BIOMETRIC",
+        "USE_FINGERPRINT"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "apiUrl": "https://thereby-atmosphere-bicycle-nightlife.trycloudflare.com/api",
+      "apiWebUrl": "https://thereby-atmosphere-bicycle-nightlife.trycloudflare.com/api",
+      "eas": {
+        "projectId": "eb6e72c1-c8c7-45e2-a2b1-8538123945f5"
+      }
+    },
+    "owner": "hetpatel8520"
+  }
+}

@@ -1,0 +1,19 @@
+﻿{
+  "version": 2,
+  "builds": [
+    {
+      "src": "src/server.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "src/server.js"
+    }
+  ],
+  "env": {
+    "MONGODB_URI": "mongodb+srv://hetdpatel8520_db_user:H2XxyxsXoqkDEETy@cluster0.kkrpbie.mongodb.net/timberbooks?retryWrites=true&w=majority",
+    "JWT_SECRET": "timberbooks_super_secret_jwt_key_2026"
+  }
+}

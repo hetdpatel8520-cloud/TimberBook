@@ -1,0 +1,16 @@
+{
+  "name": "timberbooks-root",
+  "version": "1.0.0",
+  "description": "TimberBooks Mobile GST Billing & ERP - Monorepo root",
+  "scripts": {
+    "backend": "npm --prefix backend start",
+    "backend:dev": "npm --prefix backend run dev",
+    "backend:test": "npm --prefix backend test",
+    "backend:seed": "npm --prefix backend run seed",
+    "mobile": "npm --prefix mobile start",
+    "mobile:android": "npm --prefix mobile run android",
+    "mobile:ios": "npm --prefix mobile run ios",
+    "mobile:web": "npm --prefix mobile run web",
+    "test": "npm --prefix backend test"
+  }
+}

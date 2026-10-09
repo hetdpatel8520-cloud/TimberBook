@@ -1,0 +1,16 @@
+﻿services:
+  - type: web
+    name: timberbooks-backend
+    env: node
+    plan: free
+    region: singapore
+    buildCommand: npm install
+    startCommand: npm start
+    rootDir: backend
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URI
+        value: mongodb+srv://hetdpatel8520_db_user:H2XxyxsXoqkDEETy@cluster0.kkrpbie.mongodb.net/timberbooks?retryWrites=true&w=majority
+      - key: JWT_SECRET
+        value: timberbooks_super_secret_jwt_key_2026
