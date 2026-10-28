@@ -29,11 +29,14 @@ app.get('/health', (req, res) => {
 // API Routes
 app.use('/api', apiRoutes);
 
-// Static Web App serving (if mobile/dist is built)
+// Static Web App serving (PWA / iPhone Web App / Browser)
 const path = require('path');
 const fs = require('fs');
-const distPath = path.join(__dirname, '../../mobile/dist');
-if (fs.existsSync(distPath)) {
+const publicPath = path.join(__dirname, '../public');
+const mobileDistPath = path.join(__dirname, '../../mobile/dist');
+const distPath = fs.existsSync(publicPath) ? publicPath : (fs.existsSync(mobileDistPath) ? mobileDistPath : null);
+
+if (distPath) {
   app.use(express.static(distPath));
   app.get('*', (req, res, next) => {
     if (req.path.startsWith('/api') || req.path === '/health') return next();
