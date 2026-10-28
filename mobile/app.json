@@ -19,7 +19,7 @@
     },
     "android": {
       "package": "com.timberbooks.app",
-      "versionCode": 2,
+      "versionCode": 3,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#102A43"
@@ -33,8 +33,8 @@
       "favicon": "./assets/favicon.png"
     },
     "extra": {
-      "apiUrl": "https://thereby-atmosphere-bicycle-nightlife.trycloudflare.com/api",
-      "apiWebUrl": "https://thereby-atmosphere-bicycle-nightlife.trycloudflare.com/api",
+      "apiUrl": "https://timberbooks-backend.onrender.com/api",
+      "apiWebUrl": "https://timberbooks-backend.onrender.com/api",
       "eas": {
         "projectId": "eb6e72c1-c8c7-45e2-a2b1-8538123945f5"
       }

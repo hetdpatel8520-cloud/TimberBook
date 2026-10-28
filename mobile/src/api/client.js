@@ -2,10 +2,11 @@ import axios from 'axios';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 
-export const PUBLIC_TUNNEL_URL = 'https://thereby-atmosphere-bicycle-nightlife.trycloudflare.com/api';
+export const CLOUD_247_URL = 'https://timberbooks-backend.onrender.com/api';
+export const PUBLIC_TUNNEL_URL = CLOUD_247_URL;
 export const LOCAL_WIFI_URL = 'http://10.241.74.108:5000/api';
 
-// Automatically detect host IP when running in Expo Go or Phone browser, or use Public Cloud Tunnel
+// Automatically detect host IP when running in Expo Go or Phone browser, or use 24/7 Cloud Host
 const getInitialBaseUrl = () => {
   if (Platform.OS === 'web') return '/api';
   const debuggerHost = Constants.expoConfig?.hostUri || Constants.manifest?.debuggerHost || '';
@@ -13,8 +14,8 @@ const getInitialBaseUrl = () => {
   if (host && host !== '127.0.0.1' && host !== 'localhost') {
     return `http://${host}:5000/api`;
   }
-  // Standalone APK: default to public HTTPS tunnel so it works on 5G mobile data immediately
-  return PUBLIC_TUNNEL_URL;
+  // Standalone APK: default to permanent 24/7 Render Cloud URL
+  return CLOUD_247_URL;
 };
 
 const DEFAULT_URL = getInitialBaseUrl();

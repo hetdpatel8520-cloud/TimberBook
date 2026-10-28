@@ -91,19 +91,19 @@ export default function ServerConfigModal({ visible, onClose, onServerSaved }) {
           <Text style={styles.fieldLabel}>QUICK PRESETS</Text>
           <View style={styles.presetRow}>
             <TouchableOpacity
-              style={[styles.presetChip, url.includes('trycloudflare') && styles.presetChipActive]}
-              onPress={() => handleSetPreset(PUBLIC_TUNNEL_URL)}
+              style={[styles.presetChip, url.includes('onrender.com') && styles.presetChipActive]}
+              onPress={() => handleSetPreset('https://timberbooks-backend.onrender.com/api')}
             >
-              <Ionicons name="cloud-outline" size={14} color={url.includes('trycloudflare') ? colors.goldLight : '#CBD5E1'} style={{ marginRight: 5 }} />
-              <Text style={[styles.presetChipText, url.includes('trycloudflare') && styles.presetChipTextActive]}>Cloud 5G Tunnel (Recommended)</Text>
+              <Ionicons name="cloud-done-outline" size={14} color={url.includes('onrender.com') ? colors.goldLight : '#CBD5E1'} style={{ marginRight: 5 }} />
+              <Text style={[styles.presetChipText, url.includes('onrender.com') && styles.presetChipTextActive]}>24/7 Cloud Server (Recommended)</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.presetChip, url.includes('10.241.74.108') && styles.presetChipActive]}
+              style={[styles.presetChip, url.includes('10.') && styles.presetChipActive]}
               onPress={() => handleSetPreset(LOCAL_WIFI_URL)}
             >
-              <Ionicons name="wifi-outline" size={14} color={url.includes('10.241.74.108') ? colors.goldLight : '#CBD5E1'} style={{ marginRight: 5 }} />
-              <Text style={[styles.presetChipText, url.includes('10.241.74.108') && styles.presetChipTextActive]}>Laptop Wi-Fi (10.241.74.108)</Text>
+              <Ionicons name="wifi-outline" size={14} color={url.includes('10.') ? colors.goldLight : '#CBD5E1'} style={{ marginRight: 5 }} />
+              <Text style={[styles.presetChipText, url.includes('10.') && styles.presetChipTextActive]}>Local Laptop Wi-Fi</Text>
             </TouchableOpacity>
           </View>
 
