@@ -5,12 +5,12 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  SafeAreaView,
   Alert,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import Header from '../../components/Header';
@@ -19,6 +19,7 @@ import SegmentedControl from '../../components/SegmentedControl';
 import { itemsApi } from '../../api/client';
 
 export default function ItemFormScreen({ route, navigation }) {
+  const insets = useSafeAreaInsets();
   const itemId = route?.params?.itemId;
   const isEdit = !!itemId;
 
@@ -166,7 +167,7 @@ export default function ItemFormScreen({ route, navigation }) {
   const currentTotalTax = (parseFloat(form.cgstRate) || 0) + (parseFloat(form.sgstRate) || 0);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <Header
         title={isEdit ? 'Edit Timber Item' : 'New Timber Item'}
         subtitle={isEdit ? form.name : 'Wood Species, Planks or Firewood'}
@@ -180,10 +181,16 @@ export default function ItemFormScreen({ route, navigation }) {
         </View>
       ) : (
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={{ flex: 1 }}
         >
-          <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+          <ScrollView
+            contentContainerStyle={[
+              styles.scrollContent,
+              { paddingBottom: 60 + insets.bottom }
+            ]}
+            keyboardShouldPersistTaps="handled"
+          >
             <View style={styles.card}>
               <Text style={styles.cardTitle}>Item Identification</Text>
 
@@ -372,7 +379,7 @@ export default function ItemFormScreen({ route, navigation }) {
           </ScrollView>
         </KeyboardAvoidingView>
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 

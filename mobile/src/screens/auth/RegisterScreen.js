@@ -17,12 +17,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import { useAuth } from '../../context/AuthContext';
 import { useTranslation } from '../../i18n/LanguageContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import CustomInput from '../../components/CustomInput';
 import { INDIAN_STATES, getStateCodeByName, isValidGstin, isValidPan } from '../../utils/indianStates';
 
 const BUSINESS_TYPES = ['Timber Trader', 'Saw Mill', 'Firewood Supplier', 'Other'];
 
 export default function RegisterScreen({ navigation }) {
+  const insets = useSafeAreaInsets();
   const { registerCompany, checkDuplicate, sendOtp, verifyOtp } = useAuth();
   const { t } = useTranslation();
 
@@ -304,17 +306,25 @@ export default function RegisterScreen({ navigation }) {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.container}
     >
       {/* Top Header */}
-      <View style={styles.topHeader}>
+      <View style={[styles.topHeader, { paddingTop: Math.max(insets.top, 12) + 8 }]}>
         <TouchableOpacity style={styles.backBtn} onPress={handleBack}>
           <Ionicons name="arrow-back" size={22} color={colors.white} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle}>Register Your Company</Text>
-          <Text style={styles.headerSubtitle}>Step {step} of 4: {
+          <Text
+            style={styles.headerTitle}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.8}
+            maxFontSizeMultiplier={1.3}
+          >
+            Register Your Company
+          </Text>
+          <Text style={styles.headerSubtitle} numberOfLines={1}>Step {step} of 4: {
             step === 1 ? 'Owner Account' :
             step === 2 ? 'Company Details' :
             step === 3 ? 'Tax & Bank' : 'Review & Activate'
@@ -335,7 +345,13 @@ export default function RegisterScreen({ navigation }) {
         ))}
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: Math.max(insets.bottom, 16) + 24 }
+        ]}
+        keyboardShouldPersistTaps="handled"
+      >
         {/* STEP 1: OWNER ACCOUNT */}
         {step === 1 && (
           <View style={styles.card}>

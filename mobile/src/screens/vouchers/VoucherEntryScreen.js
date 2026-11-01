@@ -5,10 +5,10 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  SafeAreaView,
   Alert,
   ActivityIndicator
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import Header from '../../components/Header';
@@ -19,6 +19,7 @@ import { ledgersApi, vouchersApi } from '../../api/client';
 import { formatINR } from '../../utils/timberMath';
 
 export default function VoucherEntryScreen({ route, navigation }) {
+  const insets = useSafeAreaInsets();
   const defaultType = route?.params?.defaultType || 'Receipt';
   const [voucherType, setVoucherType] = useState(defaultType); // 'Receipt', 'Payment', 'Contra'
   const [voucherNo, setVoucherNo] = useState('');
@@ -163,7 +164,7 @@ export default function VoucherEntryScreen({ route, navigation }) {
   const isContra = voucherType === 'Contra';
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <Header
         title={`${voucherType} Entry`}
         subtitle={voucherNo}
@@ -172,7 +173,13 @@ export default function VoucherEntryScreen({ route, navigation }) {
         badgeText={voucherType.toUpperCase()}
       />
 
-      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: 60 + insets.bottom }
+        ]}
+        keyboardShouldPersistTaps="handled"
+      >
         {/* Type Switcher at Top */}
         <View style={styles.card}>
           <Text style={styles.fieldLabel}>VOUCHER TYPE</Text>
@@ -331,7 +338,7 @@ export default function VoucherEntryScreen({ route, navigation }) {
         onSelect={(p) => setSelectedParty(p)}
         onAddNew={() => navigation.navigate('LedgerForm')}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 

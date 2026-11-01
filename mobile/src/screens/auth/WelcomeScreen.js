@@ -5,25 +5,26 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  SafeAreaView,
   Platform,
   StatusBar
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import { useTranslation, AVAILABLE_LANGUAGES } from '../../i18n/LanguageContext';
 import ServerConfigModal from '../../components/ServerConfigModal';
 
 export default function WelcomeScreen({ navigation }) {
+  const insets = useSafeAreaInsets();
   const { t, language, setLanguage } = useTranslation();
   const [showServerModal, setShowServerModal] = useState(false);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={colors.navyDark} />
 
       {/* Top Utility Bar with Server Settings & Language Selector */}
-      <View style={styles.topUtilityBar}>
+      <View style={[styles.topUtilityBar, { paddingTop: Math.max(insets.top, 12) + 6 }]}>
         <TouchableOpacity
           style={styles.serverPill}
           onPress={() => setShowServerModal(true)}
@@ -58,7 +59,10 @@ export default function WelcomeScreen({ navigation }) {
       </View>
 
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: Math.max(insets.bottom, 16) + 16 }
+        ]}
         showsVerticalScrollIndicator={false}
         bounces={false}
       >
@@ -141,7 +145,7 @@ export default function WelcomeScreen({ navigation }) {
         visible={showServerModal}
         onClose={() => setShowServerModal(false)}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 

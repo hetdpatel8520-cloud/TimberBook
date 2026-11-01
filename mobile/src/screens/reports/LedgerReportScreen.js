@@ -5,11 +5,11 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  SafeAreaView,
   ActivityIndicator,
   Alert,
   Linking
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import Header from '../../components/Header';
@@ -19,6 +19,7 @@ import { useAuth } from '../../context/AuthContext';
 import { formatINR } from '../../utils/timberMath';
 
 export default function LedgerReportScreen({ navigation }) {
+  const insets = useSafeAreaInsets();
   const { company } = useAuth();
   const [parties, setParties] = useState([]);
   const [selectedParty, setSelectedParty] = useState(null);
@@ -82,7 +83,7 @@ export default function LedgerReportScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <Header
         title="Ledger Statement"
         subtitle={selectedParty?.name || 'Statement of Accounts'}
@@ -113,7 +114,7 @@ export default function LedgerReportScreen({ navigation }) {
           <Text style={{ marginTop: 10, color: colors.textSecondary }}>Computing running balance...</Text>
         </View>
       ) : (
-        <ScrollView contentContainerStyle={styles.scrollContent}>
+        <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: 24 + insets.bottom }]}>
           {/* Opening Balance Card */}
           <View style={styles.openingCard}>
             <View>
@@ -193,7 +194,7 @@ export default function LedgerReportScreen({ navigation }) {
           loadStatement(p._id);
         }}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 

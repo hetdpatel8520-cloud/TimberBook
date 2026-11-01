@@ -5,9 +5,9 @@ import {
   StyleSheet,
   ScrollView,
   RefreshControl,
-  TouchableOpacity,
-  SafeAreaView
+  TouchableOpacity
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import { useAuth } from '../../context/AuthContext';
@@ -16,6 +16,7 @@ import { useTranslation, AVAILABLE_LANGUAGES } from '../../i18n/LanguageContext'
 import ActionTile from '../../components/ActionTile';
 
 export default function DashboardScreen({ navigation }) {
+  const insets = useSafeAreaInsets();
   const { company, financialYear } = useAuth();
   const { t, language, setLanguage } = useTranslation();
 
@@ -95,11 +96,19 @@ export default function DashboardScreen({ navigation }) {
 
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       {/* Top Professional Fintech Header */}
-      <View style={styles.topHeader}>
+      <View style={[styles.topHeader, { paddingTop: Math.max(insets.top, 12) }]}>
         <View style={styles.headerLeft}>
-          <Text style={styles.companyTitle} numberOfLines={1}>{company?.name || 'My Company'}</Text>
+          <Text
+            style={styles.companyTitle}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.8}
+            maxFontSizeMultiplier={1.3}
+          >
+            {company?.name || 'My Company'}
+          </Text>
           <View style={styles.headerSubtitleRow}>
             {/* Clickable Financial Year Badge */}
             <TouchableOpacity
@@ -152,7 +161,10 @@ export default function DashboardScreen({ navigation }) {
       </View>
 
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: 84 + insets.bottom }
+        ]}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -371,13 +383,13 @@ export default function DashboardScreen({ navigation }) {
 
       {/* Floating Action Button for Quick Bill Entry */}
       <TouchableOpacity
-        style={styles.fab}
+        style={[styles.fab, { bottom: 64 + insets.bottom + 16 }]}
         activeOpacity={0.85}
         onPress={() => navigation.navigate('BillEntry')}
       >
         <Ionicons name="add" size={28} color={colors.navyDark} />
       </TouchableOpacity>
-    </SafeAreaView>
+    </View>
   );
 }
 

@@ -5,10 +5,10 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  SafeAreaView,
   Alert,
   ActivityIndicator
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import Header from '../../components/Header';
@@ -27,6 +27,7 @@ import {
 } from '../../utils/timberMath';
 
 export default function BillEntryScreen({ route, navigation }) {
+  const insets = useSafeAreaInsets();
   const [billType, setBillType] = useState('Size'); // 'Size' | 'Drum' | 'Normal' | 'Core Wood'
   const [mode, setMode] = useState('Credit'); // 'Cash' | 'Credit'
   const [billNo, setBillNo] = useState('');
@@ -473,7 +474,7 @@ export default function BillEntryScreen({ route, navigation }) {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <Header
         title="New Bill / Invoice"
         subtitle={party ? `${party.name} (${party.city || 'Local'})` : 'Select Customer'}
@@ -482,7 +483,13 @@ export default function BillEntryScreen({ route, navigation }) {
         badgeText={billNo}
       />
 
-      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: 60 + insets.bottom }
+        ]}
+        keyboardShouldPersistTaps="handled"
+      >
         {/* Bill Type Selector: Size / Drum / Normal */}
         <View style={styles.card}>
           <Text style={styles.fieldLabel}>BILL TYPE</Text>
@@ -1003,7 +1010,7 @@ export default function BillEntryScreen({ route, navigation }) {
         }}
         onAddNew={() => navigation.navigate('ItemForm')}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 

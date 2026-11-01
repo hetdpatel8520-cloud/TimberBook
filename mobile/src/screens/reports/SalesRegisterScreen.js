@@ -5,10 +5,10 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  SafeAreaView,
   ActivityIndicator,
   RefreshControl
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import Header from '../../components/Header';
@@ -16,6 +16,7 @@ import { reportsApi } from '../../api/client';
 import { formatINR } from '../../utils/timberMath';
 
 export default function SalesRegisterScreen({ navigation }) {
+  const insets = useSafeAreaInsets();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -40,7 +41,7 @@ export default function SalesRegisterScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <Header
         title="Sales Register"
         subtitle="GST Sales Breakdown"
@@ -56,7 +57,7 @@ export default function SalesRegisterScreen({ navigation }) {
         </View>
       ) : (
         <ScrollView
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: 40 + insets.bottom }]}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -125,7 +126,7 @@ export default function SalesRegisterScreen({ navigation }) {
           )}
         </ScrollView>
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 

@@ -5,10 +5,10 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  SafeAreaView,
   ActivityIndicator,
   Alert
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
@@ -17,6 +17,7 @@ import Header from '../../components/Header';
 import { settingsApi } from '../../api/client';
 
 export default function BackupRestoreScreen({ navigation }) {
+  const insets = useSafeAreaInsets();
   const [exporting, setExporting] = useState(false);
   const [lastExport, setLastExport] = useState(null);
 
@@ -59,7 +60,7 @@ export default function BackupRestoreScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <Header
         title="Backup & Restore"
         subtitle="Data Safety & Storage"
@@ -67,7 +68,7 @@ export default function BackupRestoreScreen({ navigation }) {
         onBack={() => navigation.goBack()}
       />
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: 40 + insets.bottom }]}>
         {/* Export Card */}
         <View style={styles.card}>
           <View style={styles.iconCircle}>
@@ -119,7 +120,7 @@ export default function BackupRestoreScreen({ navigation }) {
           </TouchableOpacity>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 

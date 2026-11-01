@@ -5,12 +5,12 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  SafeAreaView,
   ActivityIndicator,
   Linking,
   Alert,
   RefreshControl
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import Header from '../../components/Header';
@@ -20,6 +20,7 @@ import { formatINR } from '../../utils/timberMath';
 import { useAuth } from '../../context/AuthContext';
 
 export default function OutstandingScreen({ navigation }) {
+  const insets = useSafeAreaInsets();
   const { company } = useAuth();
   const [tabIndex, setTabIndex] = useState(0); // 0: Receivable, 1: Payable
   const [data, setData] = useState({ receivables: { count: 0, total: 0, items: [] }, payables: { count: 0, total: 0, items: [] } });
@@ -73,7 +74,7 @@ export default function OutstandingScreen({ navigation }) {
   const isReceivable = tabIndex === 0;
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <Header
         title="Outstanding Balances"
         subtitle={isReceivable ? 'Sundry Debtors (Receivables)' : 'Sundry Creditors (Payables)'}
@@ -99,7 +100,7 @@ export default function OutstandingScreen({ navigation }) {
         </View>
       ) : (
         <ScrollView
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: 90 + insets.bottom }]}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -166,7 +167,7 @@ export default function OutstandingScreen({ navigation }) {
       )}
 
       {/* Sticky Bottom Grand Total Bar */}
-      <View style={styles.bottomTotalBar}>
+      <View style={[styles.bottomTotalBar, { paddingBottom: Math.max(insets.bottom, 14) }]}>
         <View>
           <Text style={styles.bottomTotalLabel}>
             TOTAL {isReceivable ? 'RECEIVABLE' : 'PAYABLE'}
@@ -175,9 +176,16 @@ export default function OutstandingScreen({ navigation }) {
             {activeGroup.count} {isReceivable ? 'Parties' : 'Suppliers'}
           </Text>
         </View>
-        <Text style={styles.bottomTotalAmount}>{formatINR(activeGroup.total)}</Text>
+        <Text
+          style={styles.bottomTotalAmount}
+          adjustsFontSizeToFit
+          numberOfLines={1}
+          maxFontSizeMultiplier={1.3}
+        >
+          {formatINR(activeGroup.total)}
+        </Text>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 

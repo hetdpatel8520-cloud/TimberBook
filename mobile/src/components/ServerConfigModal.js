@@ -6,8 +6,10 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  ActivityIndicator
+  ActivityIndicator,
+  ScrollView
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { getBaseUrl, setBaseUrl, setupApi, PUBLIC_TUNNEL_URL, LOCAL_WIFI_URL } from '../api/client';
@@ -72,8 +74,9 @@ export default function ServerConfigModal({ visible, onClose, onServerSaved }) {
     >
       <View style={styles.overlay}>
         <View style={styles.modalCard}>
-          {/* Header */}
-          <View style={styles.headerRow}>
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 4 }}>
+            {/* Header */}
+            <View style={styles.headerRow}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <Ionicons name="server-outline" size={22} color={colors.goldPrimary} style={{ marginRight: 8 }} />
               <Text style={styles.title}>Server Connection</Text>
@@ -170,6 +173,7 @@ export default function ServerConfigModal({ visible, onClose, onServerSaved }) {
           <Text style={styles.hintText}>
             💡 If your phone is on 5G/cellular data, connect your phone to the same Wi-Fi as your computer, or enter your Cloud Server URL.
           </Text>
+          </ScrollView>
         </View>
       </View>
     </Modal>
@@ -187,6 +191,7 @@ const styles = StyleSheet.create({
   modalCard: {
     width: '100%',
     maxWidth: 400,
+    maxHeight: '85%',
     backgroundColor: colors.white,
     borderRadius: 16,
     padding: 20,

@@ -6,11 +6,11 @@ import {
   FlatList,
   TextInput,
   TouchableOpacity,
-  SafeAreaView,
   ActivityIndicator,
   RefreshControl,
   ScrollView
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import Header from '../../components/Header';
@@ -18,6 +18,7 @@ import { itemsApi } from '../../api/client';
 import { formatINR } from '../../utils/timberMath';
 
 export default function ItemListScreen({ navigation }) {
+  const insets = useSafeAreaInsets();
   const [items, setItems] = useState([]);
   const [search, setSearch] = useState('');
   const [selectedGroup, setSelectedGroup] = useState('All');
@@ -55,7 +56,7 @@ export default function ItemListScreen({ navigation }) {
   const canGoBack = navigation.canGoBack?.() ?? false;
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <Header
         title="Timber Items"
         subtitle={`${filtered.length} Species / Stock Items`}
@@ -130,7 +131,10 @@ export default function ItemListScreen({ navigation }) {
         <FlatList
           data={filtered}
           keyExtractor={(item) => String(item._id || item.id)}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[
+            styles.listContent,
+            { paddingBottom: 84 + insets.bottom }
+          ]}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -186,13 +190,13 @@ export default function ItemListScreen({ navigation }) {
 
       {/* Floating Add Button */}
       <TouchableOpacity
-        style={styles.fab}
+        style={[styles.fab, { bottom: 20 + insets.bottom }]}
         activeOpacity={0.8}
         onPress={() => navigation.navigate('ItemForm')}
       >
         <Ionicons name="add" size={28} color={colors.white} />
       </TouchableOpacity>
-    </SafeAreaView>
+    </View>
   );
 }
 

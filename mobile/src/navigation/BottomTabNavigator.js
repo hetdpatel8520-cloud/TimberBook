@@ -2,6 +2,7 @@ import React from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
 
 import DashboardScreen from '../screens/home/DashboardScreen';
@@ -12,11 +13,22 @@ import LedgerListScreen from '../screens/masters/LedgerListScreen';
 const Tab = createBottomTabNavigator();
 
 export default function BottomTabNavigator() {
+  const insets = useSafeAreaInsets();
+  const safeBottom = Math.max(insets.bottom, 6);
+  const tabBarHeight = 56 + safeBottom;
+
   return (
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
-        tabBarStyle: styles.tabBar,
+        tabBarStyle: [
+          styles.tabBar,
+          {
+            height: tabBarHeight,
+            paddingBottom: safeBottom,
+            paddingTop: 6
+          }
+        ],
         tabBarActiveTintColor: colors.goldPrimary,
         tabBarInactiveTintColor: colors.textMuted,
         tabBarLabelStyle: styles.tabLabel

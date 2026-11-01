@@ -6,18 +6,20 @@ import {
   FlatList,
   TextInput,
   TouchableOpacity,
-  SafeAreaView,
   ActivityIndicator,
   RefreshControl,
   ScrollView
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import Header from '../../components/Header';
 import { ledgersApi } from '../../api/client';
 import { formatINR } from '../../utils/timberMath';
 
-export default function LedgerListScreen({ navigation }) {
+export default function LedgerListScreen({ route, navigation }) {
+  const insets = useSafeAreaInsets();
+  const isTab = route?.name === 'MastersTab';
   const [ledgers, setLedgers] = useState([]);
   const [search, setSearch] = useState('');
   const [selectedGroup, setSelectedGroup] = useState('All');
@@ -65,7 +67,7 @@ export default function LedgerListScreen({ navigation }) {
   const canGoBack = navigation.canGoBack?.() ?? false;
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <Header
         title="Ledger Directory"
         subtitle={`${filtered.length} Accounts Found`}
@@ -140,7 +142,10 @@ export default function LedgerListScreen({ navigation }) {
         <FlatList
           data={filtered}
           keyExtractor={(item) => String(item._id || item.id)}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[
+            styles.listContent,
+            { paddingBottom: (isTab ? 84 : 32) + insets.bottom }
+          ]}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -199,13 +204,13 @@ export default function LedgerListScreen({ navigation }) {
 
       {/* Floating Add Button */}
       <TouchableOpacity
-        style={styles.fab}
+        style={[styles.fab, { bottom: (isTab ? 64 : 16) + insets.bottom + 12 }]}
         activeOpacity={0.8}
         onPress={() => navigation.navigate('LedgerForm')}
       >
         <Ionicons name="add" size={28} color={colors.white} />
       </TouchableOpacity>
-    </SafeAreaView>
+    </View>
   );
 }
 

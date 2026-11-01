@@ -5,12 +5,12 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  SafeAreaView,
   Switch,
   Alert,
   Modal,
   ActivityIndicator
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import Header from '../../components/Header';
@@ -20,6 +20,7 @@ import { useTranslation, AVAILABLE_LANGUAGES } from '../../i18n/LanguageContext'
 import { settingsApi, invoicesApi } from '../../api/client';
 
 export default function SettingsScreen({ navigation }) {
+  const insets = useSafeAreaInsets();
   const { company, owner, financialYear, logout, lockApp } = useAuth();
   const { t, language, setLanguage } = useTranslation();
   const [biometricEnabled, setBiometricEnabled] = useState(owner?.biometricEnabled || true);
@@ -81,7 +82,7 @@ export default function SettingsScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <Header
         title="Settings & Utility"
         subtitle="Configuration & Data Tools"
@@ -89,7 +90,12 @@ export default function SettingsScreen({ navigation }) {
         onBack={() => navigation.goBack()}
       />
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: 60 + insets.bottom }
+        ]}
+      >
         {/* Company Info Header Card */}
         <View style={styles.card}>
           <View style={styles.companyHeader}>
@@ -325,7 +331,7 @@ export default function SettingsScreen({ navigation }) {
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -464,6 +470,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.cardBg,
     borderRadius: 14,
     padding: 20,
+    maxHeight: '85%',
     borderWidth: 1,
     borderColor: colors.border,
     shadowColor: '#000',

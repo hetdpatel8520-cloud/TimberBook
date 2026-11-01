@@ -7,6 +7,8 @@ import { LanguageProvider } from './src/i18n/LanguageContext';
 import { AuthProvider } from './src/context/AuthContext';
 import RootNavigator from './src/navigation/RootNavigator';
 
+import { colors } from './src/theme/colors';
+
 const queryClient = new QueryClient();
 
 export default function App() {
@@ -15,7 +17,7 @@ export default function App() {
       <QueryClientProvider client={queryClient}>
         <LanguageProvider>
           <AuthProvider>
-            <StatusBar style="light" />
+            <StatusBar style="light" backgroundColor={colors.navyDark} />
             <RootNavigator />
           </AuthProvider>
         </LanguageProvider>

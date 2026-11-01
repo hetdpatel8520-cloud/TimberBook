@@ -15,10 +15,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import { useAuth } from '../../context/AuthContext';
 import { useTranslation, AVAILABLE_LANGUAGES } from '../../i18n/LanguageContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import CustomInput from '../../components/CustomInput';
 import ServerConfigModal from '../../components/ServerConfigModal';
 
 export default function LoginScreen({ navigation }) {
+  const insets = useSafeAreaInsets();
   const { login, loginWithPin } = useAuth();
   const { t, language, setLanguage } = useTranslation();
   const [showServerModal, setShowServerModal] = useState(false);
@@ -105,10 +107,19 @@ export default function LoginScreen({ navigation }) {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.container}
     >
-      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={[
+          styles.scrollContent,
+          {
+            paddingTop: Math.max(insets.top, 16) + 8,
+            paddingBottom: Math.max(insets.bottom, 16) + 12
+          }
+        ]}
+        keyboardShouldPersistTaps="handled"
+      >
         {/* Top Utility Bar with Back, Server Config, and Language Switcher */}
         <View style={styles.topUtilityBar}>
           <TouchableOpacity

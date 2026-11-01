@@ -6,9 +6,9 @@ import {
   StyleSheet,
   TextInput,
   FlatList,
-  TouchableOpacity,
-  SafeAreaView
+  TouchableOpacity
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { formatINR } from '../utils/timberMath';
@@ -21,6 +21,7 @@ export default function ItemPickerModal({
   title = 'Select Timber Item',
   onAddNew
 }) {
+  const insets = useSafeAreaInsets();
   const [search, setSearch] = useState('');
 
   const filtered = items.filter((i) => {
@@ -35,12 +36,20 @@ export default function ItemPickerModal({
 
   return (
     <Modal visible={visible} animationType="slide" transparent={false}>
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.header}>
+      <View style={styles.safeArea}>
+        <View style={[styles.header, { paddingTop: Math.max(insets.top, 10) }]}>
           <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
             <Ionicons name="close" size={24} color={colors.white} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>{title}</Text>
+          <Text
+            style={styles.headerTitle}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.8}
+            maxFontSizeMultiplier={1.3}
+          >
+            {title}
+          </Text>
           {onAddNew ? (
             <TouchableOpacity onPress={onAddNew} style={styles.addBtn}>
               <Ionicons name="add" size={24} color={colors.goldPrimary} />
@@ -70,7 +79,10 @@ export default function ItemPickerModal({
         <FlatList
           data={filtered}
           keyExtractor={(item) => String(item._id || item.id)}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[
+            styles.listContent,
+            { paddingBottom: 24 + insets.bottom }
+          ]}
           renderItem={({ item }) => {
             const isLowStock = (item.currentStock || 0) <= (item.reorderLevel || 0);
             return (
@@ -117,7 +129,7 @@ export default function ItemPickerModal({
             </View>
           }
         />
-      </SafeAreaView>
+      </View>
     </Modal>
   );
 }

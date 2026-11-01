@@ -14,9 +14,11 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import { useAuth } from '../../context/AuthContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import CustomInput from '../../components/CustomInput';
 
 export default function ForgotPasswordScreen({ navigation }) {
+  const insets = useSafeAreaInsets();
   const { forgotPassword, resetPassword } = useAuth();
 
   // Stage: 1 (Request OTP) -> 2 (Verify OTP & Set New Password)
@@ -98,17 +100,31 @@ export default function ForgotPasswordScreen({ navigation }) {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.container}
     >
-      <View style={styles.topHeader}>
+      <View style={[styles.topHeader, { paddingTop: Math.max(insets.top, 12) + 8 }]}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={22} color={colors.white} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Reset Password / PIN</Text>
+        <Text
+          style={styles.headerTitle}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.8}
+          maxFontSizeMultiplier={1.3}
+        >
+          Reset Password / PIN
+        </Text>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: Math.max(insets.bottom, 16) + 24 }
+        ]}
+        keyboardShouldPersistTaps="handled"
+      >
         <View style={styles.card}>
           <View style={styles.iconCircle}>
             <Ionicons name="key-outline" size={32} color={colors.goldPrimary} />

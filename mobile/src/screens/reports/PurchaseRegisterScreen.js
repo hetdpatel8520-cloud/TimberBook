@@ -5,16 +5,17 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  SafeAreaView,
   ActivityIndicator,
   RefreshControl
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../../theme/colors';
 import Header from '../../components/Header';
 import { reportsApi } from '../../api/client';
 import { formatINR } from '../../utils/timberMath';
 
 export default function PurchaseRegisterScreen({ navigation }) {
+  const insets = useSafeAreaInsets();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -39,7 +40,7 @@ export default function PurchaseRegisterScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <Header
         title="Purchase Register"
         subtitle="Inward ITC Breakdown"
@@ -55,7 +56,7 @@ export default function PurchaseRegisterScreen({ navigation }) {
         </View>
       ) : (
         <ScrollView
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: 40 + insets.bottom }]}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -120,7 +121,7 @@ export default function PurchaseRegisterScreen({ navigation }) {
           )}
         </ScrollView>
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 

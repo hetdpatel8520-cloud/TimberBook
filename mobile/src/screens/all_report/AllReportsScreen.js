@@ -5,9 +5,9 @@ import {
   StyleSheet,
   ScrollView,
   RefreshControl,
-  TouchableOpacity,
-  SafeAreaView
+  TouchableOpacity
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import { useAuth } from '../../context/AuthContext';
@@ -16,7 +16,9 @@ import { useTranslation } from '../../i18n/LanguageContext';
 import MetricCard from '../../components/MetricCard';
 import { formatINR } from '../../utils/timberMath';
 
-export default function AllReportsScreen({ navigation }) {
+export default function AllReportsScreen({ route, navigation }) {
+  const insets = useSafeAreaInsets();
+  const isTab = route?.name === 'ReportsTab';
   const { company, financialYear } = useAuth();
   const { t } = useTranslation();
 
@@ -141,9 +143,9 @@ export default function AllReportsScreen({ navigation }) {
   ];
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       {/* Top Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: Math.max(insets.top, 12) }]}>
         <View style={styles.headerLeft}>
           {navigation.canGoBack() && (
             <TouchableOpacity
@@ -154,9 +156,17 @@ export default function AllReportsScreen({ navigation }) {
               <Ionicons name="arrow-back" size={22} color={colors.white} />
             </TouchableOpacity>
           )}
-          <View>
-            <Text style={styles.headerTitle}>All Reports & Finance</Text>
-            <Text style={styles.headerSubtitle}>
+          <View style={{ flex: 1 }}>
+            <Text
+              style={styles.headerTitle}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.8}
+              maxFontSizeMultiplier={1.3}
+            >
+              All Reports & Finance
+            </Text>
+            <Text style={styles.headerSubtitle} numberOfLines={1}>
               {company?.name || 'My Company'} • {financialYear?.name || 'FY 2026-27'}
             </Text>
           </View>
@@ -172,7 +182,10 @@ export default function AllReportsScreen({ navigation }) {
       </View>
 
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: (isTab ? 84 : 32) + insets.bottom }
+        ]}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -343,7 +356,7 @@ export default function AllReportsScreen({ navigation }) {
           ))}
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 

@@ -5,10 +5,10 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  SafeAreaView,
   Alert,
   ActivityIndicator
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import Header from '../../components/Header';
@@ -20,6 +20,7 @@ import { ledgersApi, itemsApi, purchasesApi } from '../../api/client';
 import { calculateGst, calculateRoundOff, formatINR } from '../../utils/timberMath';
 
 export default function PurchaseEntryScreen({ route, navigation }) {
+  const insets = useSafeAreaInsets();
   const [mode, setMode] = useState('Credit');
   const [supplierBillNo, setSupplierBillNo] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -284,7 +285,7 @@ export default function PurchaseEntryScreen({ route, navigation }) {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <Header
         title="Purchase Entry"
         subtitle={party ? `${party.name} (${party.city || 'Supplier'})` : 'Select Supplier'}
@@ -293,7 +294,13 @@ export default function PurchaseEntryScreen({ route, navigation }) {
         badgeText="INWARD"
       />
 
-      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: 60 + insets.bottom }
+        ]}
+        keyboardShouldPersistTaps="handled"
+      >
         <View style={styles.card}>
           <Text style={styles.fieldLabel}>PURCHASE MODE</Text>
           <SegmentedControl
@@ -503,7 +510,7 @@ export default function PurchaseEntryScreen({ route, navigation }) {
         }}
         onAddNew={() => navigation.navigate('ItemForm')}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 

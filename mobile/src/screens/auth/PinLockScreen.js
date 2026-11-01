@@ -4,14 +4,15 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  SafeAreaView,
   Alert
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import { useAuth } from '../../context/AuthContext';
 
 export default function PinLockScreen() {
+  const insets = useSafeAreaInsets();
   const { unlockWithPin, company, logout } = useAuth();
   const [pin, setPin] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
@@ -45,12 +46,20 @@ export default function PinLockScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.topSection}>
+    <View style={styles.container}>
+      <View style={[styles.topSection, { paddingTop: Math.max(insets.top, 20) + 16 }]}>
         <View style={styles.logoBadge}>
           <Ionicons name="lock-closed" size={32} color={colors.goldPrimary} />
         </View>
-        <Text style={styles.companyName}>{company?.name || 'TimberBooks'}</Text>
+        <Text
+          style={styles.companyName}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.8}
+          maxFontSizeMultiplier={1.3}
+        >
+          {company?.name || 'TimberBooks'}
+        </Text>
         <Text style={styles.instruction}>Enter Quick 4-Digit PIN</Text>
 
         {/* PIN Dots */}
@@ -74,7 +83,7 @@ export default function PinLockScreen() {
       </View>
 
       {/* Numeric Keypad */}
-      <View style={styles.keypad}>
+      <View style={[styles.keypad, { paddingBottom: Math.max(insets.bottom, 16) + 16 }]}>
         {[
           ['1', '2', '3'],
           ['4', '5', '6'],
@@ -125,7 +134,7 @@ export default function PinLockScreen() {
           <Text style={styles.switchLoginText}>Use Master Password Instead</Text>
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 

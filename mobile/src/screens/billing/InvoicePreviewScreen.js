@@ -5,12 +5,12 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  SafeAreaView,
   ActivityIndicator,
   Alert,
   Linking,
   Platform
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
@@ -20,6 +20,7 @@ import { invoicesApi, companyApi } from '../../api/client';
 import { formatINR } from '../../utils/timberMath';
 
 export default function InvoicePreviewScreen({ route, navigation }) {
+  const insets = useSafeAreaInsets();
   const { invoiceId } = route.params || {};
   const [invoice, setInvoice] = useState(null);
   const [company, setCompany] = useState(null);
@@ -129,19 +130,19 @@ export default function InvoicePreviewScreen({ route, navigation }) {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <View style={styles.container}>
         <Header title="Invoice Preview" showBack onBack={() => navigation.goBack()} />
         <View style={styles.center}>
           <ActivityIndicator size="large" color={colors.goldPrimary} />
           <Text style={{ marginTop: 12, color: colors.textSecondary }}>Rendering Tax Invoice...</Text>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   if (!invoice) {
     return (
-      <SafeAreaView style={styles.container}>
+      <View style={styles.container}>
         <Header title="Invoice Preview" showBack onBack={() => navigation.goBack()} />
         <View style={styles.center}>
           <Ionicons name="receipt-outline" size={54} color={colors.slateGrey} />
@@ -156,7 +157,7 @@ export default function InvoicePreviewScreen({ route, navigation }) {
             <Text style={{ color: colors.white, fontWeight: '700' }}>➕ Create New Bill</Text>
           </TouchableOpacity>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
@@ -165,7 +166,7 @@ export default function InvoicePreviewScreen({ route, navigation }) {
   const extra = invoice.extraDetails || {};
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <Header
         title={`Tax Invoice #${invoice.billNo}`}
         subtitle={`${party.name || 'Party'} • ₹${Number(invoice.grandTotal || 0).toLocaleString('en-IN')}`}
@@ -174,7 +175,7 @@ export default function InvoicePreviewScreen({ route, navigation }) {
         badgeText="ORIGINAL"
       />
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: 40 + insets.bottom }]}>
         {/* Printable Tax Invoice Document Card */}
         <View style={styles.invoiceDoc}>
           {/* Header Box */}
@@ -348,7 +349,7 @@ export default function InvoicePreviewScreen({ route, navigation }) {
           </TouchableOpacity>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 

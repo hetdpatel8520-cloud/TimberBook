@@ -4,16 +4,17 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  SafeAreaView,
   ActivityIndicator,
   RefreshControl
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../../theme/colors';
 import Header from '../../components/Header';
 import { reportsApi } from '../../api/client';
 import { formatINR } from '../../utils/timberMath';
 
 export default function CashBookScreen({ navigation }) {
+  const insets = useSafeAreaInsets();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -38,7 +39,7 @@ export default function CashBookScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <Header
         title="Cash Book"
         subtitle="Cash in Hand Register"
@@ -54,7 +55,7 @@ export default function CashBookScreen({ navigation }) {
         </View>
       ) : (
         <ScrollView
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: 40 + insets.bottom }]}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -136,7 +137,7 @@ export default function CashBookScreen({ navigation }) {
           )}
         </ScrollView>
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 

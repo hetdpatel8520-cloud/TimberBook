@@ -5,12 +5,12 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  SafeAreaView,
   Alert,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import Header from '../../components/Header';
@@ -19,6 +19,7 @@ import SegmentedControl from '../../components/SegmentedControl';
 import { ledgersApi } from '../../api/client';
 
 export default function LedgerFormScreen({ route, navigation }) {
+  const insets = useSafeAreaInsets();
   const ledgerId = route?.params?.ledgerId;
   const isEdit = !!ledgerId;
 
@@ -213,7 +214,7 @@ export default function LedgerFormScreen({ route, navigation }) {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <Header
         title={isEdit ? 'Edit Ledger' : 'New Ledger Account'}
         subtitle={isEdit ? form.name : 'Create Party, Customer or Bank'}
@@ -227,10 +228,16 @@ export default function LedgerFormScreen({ route, navigation }) {
         </View>
       ) : (
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={{ flex: 1 }}
         >
-          <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+          <ScrollView
+            contentContainerStyle={[
+              styles.scrollContent,
+              { paddingBottom: 60 + insets.bottom }
+            ]}
+            keyboardShouldPersistTaps="handled"
+          >
             {/* General Info Card */}
             <View style={styles.card}>
               <Text style={styles.cardTitle}>Basic Account Details</Text>
@@ -434,7 +441,7 @@ export default function LedgerFormScreen({ route, navigation }) {
           </ScrollView>
         </KeyboardAvoidingView>
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 

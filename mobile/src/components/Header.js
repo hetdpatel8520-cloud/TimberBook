@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, StatusBar } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 
@@ -12,8 +13,10 @@ export default function Header({
   onRightPress,
   badgeText
 }) {
+  const insets = useSafeAreaInsets();
+
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: Math.max(insets.top, 12) }]}>
       <StatusBar barStyle="light-content" backgroundColor={colors.navyDark} />
       <View style={styles.contentRow}>
         <View style={styles.leftCol}>
@@ -33,15 +36,27 @@ export default function Header({
 
           <View style={styles.titleCol}>
             <View style={styles.titleRow}>
-              <Text style={styles.titleText} numberOfLines={1}>{title}</Text>
+              <Text
+                style={styles.titleText}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.8}
+                maxFontSizeMultiplier={1.3}
+              >
+                {title}
+              </Text>
               {badgeText && (
                 <View style={styles.fyBadge}>
-                  <Text style={styles.fyBadgeText}>{badgeText}</Text>
+                  <Text style={styles.fyBadgeText} numberOfLines={1}>{badgeText}</Text>
                 </View>
               )}
             </View>
             {subtitle && (
-              <Text style={styles.subtitleText} numberOfLines={1}>
+              <Text
+                style={styles.subtitleText}
+                numberOfLines={1}
+                maxFontSizeMultiplier={1.3}
+              >
                 {subtitle}
               </Text>
             )}
