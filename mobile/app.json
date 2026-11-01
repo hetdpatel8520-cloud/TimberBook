@@ -2,10 +2,17 @@
   "expo": {
     "name": "TimberBooks",
     "slug": "timberbooks",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "orientation": "default",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
+    "updates": {
+      "url": "https://u.expo.dev/eb6e72c1-c8c7-45e2-a2b1-8538123945f5",
+      "fallbackToCacheTimeout": 0
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
@@ -19,7 +26,7 @@
     },
     "android": {
       "package": "com.timberbooks.app",
-      "versionCode": 4,
+      "versionCode": 5,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#102A43"

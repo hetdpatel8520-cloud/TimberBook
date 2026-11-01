@@ -160,5 +160,10 @@ export const syncApi = {
   getStatus: () => apiClient.get('/sync/status')
 };
 
+// 13. App Version & Updates API
+export const appVersionApi = {
+  checkVersion: (params) => apiClient.get('/app-version', { params })
+};
+
 export default apiClient;
 

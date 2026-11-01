@@ -18,6 +18,7 @@ import { useTranslation, AVAILABLE_LANGUAGES } from '../../i18n/LanguageContext'
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import CustomInput from '../../components/CustomInput';
 import ServerConfigModal from '../../components/ServerConfigModal';
+import { CURRENT_VERSION } from '../../services/updateService';
 
 export default function LoginScreen({ navigation }) {
   const insets = useSafeAreaInsets();
@@ -363,10 +364,10 @@ export default function LoginScreen({ navigation }) {
           </View>
         </View>
 
-        {/* Security Footer Note */}
+        {/* Security & Version Footer Note */}
         <View style={styles.footerNote}>
           <Ionicons name="shield-checkmark-outline" size={14} color={colors.textMuted} style={{ marginRight: 6 }} />
-          <Text style={styles.footerText}>Secure Multi-Tenant Cloud Architecture</Text>
+          <Text style={styles.footerText}>Secure Multi-Tenant Cloud • TimberBooks v{CURRENT_VERSION}</Text>
         </View>
       </ScrollView>
 

@@ -15,12 +15,15 @@ const reportController = require('../controllers/reportController');
 const settingsController = require('../controllers/settingsController');
 const financialYearController = require('../controllers/financialYearController');
 const syncController = require('../controllers/syncController');
+const appVersionController = require('../controllers/appVersionController');
 
 // 1. Setup & Public
 router.get('/setup/status', setupController.getSetupStatus);
 router.post('/setup/initialize', setupController.initializeSetup);
 router.post('/setup/seed-demo', setupController.seedDemo);
 router.get('/sync/status', syncController.getSyncStatus);
+router.get('/app-version', appVersionController.getAppVersion);
+router.get('/version', appVersionController.getAppVersion);
 
 // 2. Auth & Multi-Step Registration
 router.post('/auth/register-check', authController.checkDuplicate);

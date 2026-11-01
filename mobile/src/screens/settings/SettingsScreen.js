@@ -18,12 +18,14 @@ import CustomInput from '../../components/CustomInput';
 import { useAuth } from '../../context/AuthContext';
 import { useTranslation, AVAILABLE_LANGUAGES } from '../../i18n/LanguageContext';
 import { settingsApi, invoicesApi } from '../../api/client';
+import { CURRENT_VERSION, CURRENT_VERSION_CODE, checkAllUpdates } from '../../services/updateService';
 
 export default function SettingsScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const { company, owner, financialYear, logout, lockApp } = useAuth();
   const { t, language, setLanguage } = useTranslation();
   const [biometricEnabled, setBiometricEnabled] = useState(owner?.biometricEnabled || true);
+  const [checkingUpdate, setCheckingUpdate] = useState(false);
 
   // Invoice Numbering Management
   const [showNumberingModal, setShowNumberingModal] = useState(false);
@@ -79,6 +81,25 @@ export default function SettingsScreen({ navigation }) {
 
   const handleLockNow = () => {
     lockApp();
+  };
+
+  const handleCheckUpdate = async () => {
+    try {
+      setCheckingUpdate(true);
+      await checkAllUpdates({ showNoUpdateAlert: true });
+    } catch (err) {
+      Alert.alert('Update Check', err.message || 'Could not verify updates.');
+    } finally {
+      setCheckingUpdate(false);
+    }
+  };
+
+  const handleShowWhatsNew = () => {
+    Alert.alert(
+      `What's New in v${CURRENT_VERSION}`,
+      `• Responsive layout for all screen sizes & tablets\n• Safe-area notch and status bar fix for Android & iOS\n• Timber dimension 2x2 grid on compact phones\n• Balanced Quick Entry tile grid\n• Seamless in-app & over-the-air (OTA) updates without reinstallation`,
+      [{ text: 'Great!', style: 'default' }]
+    );
   };
 
   return (
@@ -252,18 +273,64 @@ export default function SettingsScreen({ navigation }) {
           </TouchableOpacity>
         </View>
 
-        {/* ABOUT & LOGOUT */}
-        <Text style={styles.sectionTitle}>APP INFORMATION</Text>
+        {/* APP VERSION & UPDATES */}
+        <Text style={styles.sectionTitle}>APP VERSION & UPDATES</Text>
         <View style={styles.menuCard}>
           <View style={styles.menuItem}>
             <View style={styles.menuIconBox}>
-              <Ionicons name="information-circle-outline" size={20} color={colors.navyPrimary} />
+              <Ionicons name="sparkles" size={20} color={colors.goldPrimary} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.menuTitle}>TimberBooks Mobile ERP</Text>
-              <Text style={styles.menuSub}>Version 1.0.0 • Mobile replica of Windows desktop ERP</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Text style={styles.menuTitle}>TimberBooks Mobile</Text>
+                <View style={styles.versionPill}>
+                  <Text style={styles.versionPillText}>v{CURRENT_VERSION}</Text>
+                </View>
+              </View>
+              <Text style={styles.menuSub}>Build Code {CURRENT_VERSION_CODE} • Over-the-air (OTA) enabled</Text>
             </View>
           </View>
+
+          <View style={styles.divider} />
+
+          <TouchableOpacity
+            style={styles.menuItem}
+            activeOpacity={0.7}
+            onPress={handleCheckUpdate}
+            disabled={checkingUpdate}
+          >
+            <View style={styles.menuIconBox}>
+              <Ionicons name="refresh-circle-outline" size={20} color={colors.navyPrimary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.menuTitle}>Check for Updates</Text>
+              <Text style={styles.menuSub}>
+                {checkingUpdate ? 'Checking server for latest build...' : 'Check for new features & hotfixes'}
+              </Text>
+            </View>
+            {checkingUpdate ? (
+              <ActivityIndicator size="small" color={colors.goldPrimary} />
+            ) : (
+              <Ionicons name="chevron-forward" size={18} color={colors.borderDark} />
+            )}
+          </TouchableOpacity>
+
+          <View style={styles.divider} />
+
+          <TouchableOpacity
+            style={styles.menuItem}
+            activeOpacity={0.7}
+            onPress={handleShowWhatsNew}
+          >
+            <View style={styles.menuIconBox}>
+              <Ionicons name="newspaper-outline" size={20} color={colors.navyPrimary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.menuTitle}>What's New in v{CURRENT_VERSION}</Text>
+              <Text style={styles.menuSub}>See latest features, fixes & release notes</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.borderDark} />
+          </TouchableOpacity>
         </View>
 
         <TouchableOpacity style={styles.logoutBtn} onPress={logout}>
@@ -550,5 +617,19 @@ const styles = StyleSheet.create({
   },
   btnDisabled: {
     opacity: 0.6
+  },
+  versionPill: {
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+    marginLeft: 8,
+    borderWidth: 1,
+    borderColor: '#FCD34D'
+  },
+  versionPillText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#92400E'
   }
 });
