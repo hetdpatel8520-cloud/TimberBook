@@ -18,7 +18,7 @@ const APP_VERSION_CONFIG = {
     'Balanced Quick Entry tile grid with zero empty spaces.',
     'Direct in-app update checks & EAS over-the-air (OTA) updates.'
   ].join('\n'),
-  apkUrl: process.env.APP_APK_URL || '',
+  apkUrl: process.env.APP_APK_URL || 'https://expo.dev/artifacts/eas/If8waEjmvIok-6MCmC1Z1fuZkNFUhIIwBzXldxiPBdY.apk',
   easProjectId: 'eb6e72c1-c8c7-45e2-a2b1-8538123945f5',
   channel: 'production'
 };
