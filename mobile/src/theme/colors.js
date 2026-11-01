@@ -24,6 +24,7 @@ export const colors = {
   textPrimary: '#102A43',   // Navy header
   textSecondary: '#486581', // Slate body
   textMuted: '#829AB1',     // Light grey subtitle
+  placeholder: '#B8C0CC',   // Light grey example placeholder
   textInverse: '#FFFFFF',
 
   // Status highlights using the palette tones

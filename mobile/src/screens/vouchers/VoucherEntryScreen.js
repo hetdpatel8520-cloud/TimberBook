@@ -37,6 +37,7 @@ export default function VoucherEntryScreen({ route, navigation }) {
   const [showCashBankPicker, setShowCashBankPicker] = useState(false);
   const [showPartyPicker, setShowPartyPicker] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState({});
 
   useEffect(() => {
     loadAccounts();
@@ -94,16 +95,25 @@ export default function VoucherEntryScreen({ route, navigation }) {
   const addChipAmount = (addVal) => {
     const current = parseFloat(amount) || 0;
     setAmount(String(current + addVal));
+    if (errors.amount) setErrors((prev) => ({ ...prev, amount: null }));
   };
 
   const handleSave = async () => {
+    const errs = {};
     const val = parseFloat(amount);
-    if (!val || val <= 0) {
-      Alert.alert('Amount Required', 'Please enter a valid amount greater than zero.');
-      return;
+    if (!amount || isNaN(val) || val <= 0) {
+      errs.amount = 'Please enter a valid amount greater than zero';
     }
-    if (!selectedCashBank || !selectedParty) {
-      Alert.alert('Accounts Required', 'Please select both accounts.');
+    if (!selectedCashBank) {
+      errs.cashBank = 'Please select a cash/bank account';
+    }
+    if (!selectedParty) {
+      errs.party = 'Please select a party/ledger account';
+    }
+
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs);
+      Alert.alert('Incomplete Voucher', 'Please enter a valid positive amount and select both accounts.');
       return;
     }
 
@@ -195,16 +205,18 @@ export default function VoucherEntryScreen({ route, navigation }) {
 
         {/* Account Pickers Card */}
         <View style={styles.card}>
-          {/* Primary Cash/Bank Account */}
-          <Text style={styles.fieldLabel}>
-            {isContra ? 'FROM CASH / BANK A/C *' : isReceipt ? 'DEPOSIT INTO (CASH / BANK) *' : 'PAID FROM (CASH / BANK) *'}
+          <Text style={[styles.fieldLabel, errors.cashBank && { color: colors.errorText }]}>
+            {isContra ? 'FROM CASH / BANK A/C *' : isReceipt ? 'DEPOSIT INTO (CASH / BANK) *' : 'PAID FROM (CASH / BANK) *'} {errors.cashBank ? `(${errors.cashBank})` : ''}
           </Text>
           <TouchableOpacity
-            style={styles.accountBtn}
-            onPress={() => setShowCashBankPicker(true)}
+            style={[styles.accountBtn, errors.cashBank && { borderColor: colors.errorText, borderWidth: 1 }]}
+            onPress={() => {
+              if (errors.cashBank) setErrors((prev) => ({ ...prev, cashBank: null }));
+              setShowCashBankPicker(true);
+            }}
           >
             <View style={{ flex: 1 }}>
-              <Text style={styles.accountName}>
+              <Text style={[styles.accountName, !selectedCashBank && { color: colors.placeholder }]}>
                 {selectedCashBank ? selectedCashBank.name : 'Select Cash / Bank...'}
               </Text>
               {selectedCashBank && (
@@ -217,15 +229,18 @@ export default function VoucherEntryScreen({ route, navigation }) {
           </TouchableOpacity>
 
           {/* Opposite Account: Customer / Supplier / Transferee */}
-          <Text style={[styles.fieldLabel, { marginTop: 12 }]}>
-            {isContra ? 'TO CASH / BANK A/C *' : isReceipt ? 'RECEIVED FROM (CUSTOMER) *' : 'PAID TO (SUPPLIER / EXPENSE) *'}
+          <Text style={[styles.fieldLabel, { marginTop: 12 }, errors.party && { color: colors.errorText }]}>
+            {isContra ? 'TO CASH / BANK A/C *' : isReceipt ? 'RECEIVED FROM (CUSTOMER) *' : 'PAID TO (SUPPLIER / EXPENSE) *'} {errors.party ? `(${errors.party})` : ''}
           </Text>
           <TouchableOpacity
-            style={styles.accountBtn}
-            onPress={() => setShowPartyPicker(true)}
+            style={[styles.accountBtn, errors.party && { borderColor: colors.errorText, borderWidth: 1 }]}
+            onPress={() => {
+              if (errors.party) setErrors((prev) => ({ ...prev, party: null }));
+              setShowPartyPicker(true);
+            }}
           >
             <View style={{ flex: 1 }}>
-              <Text style={styles.accountName}>
+              <Text style={[styles.accountName, !selectedParty && { color: colors.placeholder }]}>
                 {selectedParty ? selectedParty.name : 'Select Party / Account...'}
               </Text>
               {selectedParty && (
@@ -244,7 +259,11 @@ export default function VoucherEntryScreen({ route, navigation }) {
             label="Amount (₹) *"
             placeholder="0.00"
             value={amount}
-            onChangeText={setAmount}
+            onChangeText={(v) => {
+              setAmount(v);
+              if (errors.amount) setErrors((prev) => ({ ...prev, amount: null }));
+            }}
+            error={errors.amount}
             keyboardType="numeric"
             prefix="₹"
           />

@@ -19,7 +19,7 @@ import ItemPickerModal from '../../components/ItemPickerModal';
 import { ledgersApi, itemsApi, purchasesApi } from '../../api/client';
 import { calculateGst, calculateRoundOff, formatINR } from '../../utils/timberMath';
 
-export default function PurchaseEntryScreen({ navigation }) {
+export default function PurchaseEntryScreen({ route, navigation }) {
   const [mode, setMode] = useState('Credit');
   const [supplierBillNo, setSupplierBillNo] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -33,23 +33,28 @@ export default function PurchaseEntryScreen({ navigation }) {
   const [showItemPicker, setShowItemPicker] = useState(false);
   const [activeRowIndex, setActiveRowIndex] = useState(null);
 
-  const [rows, setRows] = useState([
-    {
-      itemId: null,
-      description: '',
-      hsn: '4407',
-      qty: '50',
-      unit: 'CFT',
-      rate: '1100',
-      discPercent: '0',
-      taxPercent: 18,
-      amount: 55000,
-      cgstAmount: 4950,
-      sgstAmount: 4950,
-      igstAmount: 0,
-      total: 64900
-    }
-  ]);
+  // Helper to create empty row
+  const createEmptyPurchaseRow = () => ({
+    itemId: null,
+    description: '',
+    hsn: '',
+    qty: '',
+    unit: 'CFT',
+    rate: '',
+    discPercent: '',
+    taxPercent: null,
+    amount: 0,
+    cgstAmount: 0,
+    sgstAmount: 0,
+    igstAmount: 0,
+    total: 0
+  });
+
+  const [rows, setRows] = useState([createEmptyPurchaseRow()]);
+
+  // Validation errors
+  const [rowErrors, setRowErrors] = useState({});
+  const [formErrors, setFormErrors] = useState({});
 
   const [saving, setSaving] = useState(false);
 
@@ -57,22 +62,61 @@ export default function PurchaseEntryScreen({ navigation }) {
     loadData();
   }, []);
 
+  const clearRowError = (index, field) => {
+    if (rowErrors[index] && rowErrors[index][field]) {
+      setRowErrors((prev) => {
+        const copy = { ...prev };
+        if (copy[index]) {
+          copy[index] = { ...copy[index] };
+          delete copy[index][field];
+        }
+        return copy;
+      });
+    }
+  };
+
   const loadData = async () => {
     try {
+      const purchaseId = route?.params?.purchaseId;
       const [creditorsRes, itemsRes] = await Promise.all([
         ledgersApi.list({ type: 'creditors' }),
         itemsApi.list()
       ]);
       if (creditorsRes.ledgers) {
         setParties(creditorsRes.ledgers);
-        if (creditorsRes.ledgers.length > 0 && !party) {
-          setParty(creditorsRes.ledgers[0]);
-        }
       }
       if (itemsRes.items) {
         setItemsMaster(itemsRes.items);
-        if (itemsRes.items.length > 0 && !rows[0].itemId) {
-          selectItemForRow(0, itemsRes.items[0]);
+      }
+
+      if (purchaseId) {
+        const purRes = await purchasesApi.getById(purchaseId);
+        if (purRes.purchase) {
+          const pur = purRes.purchase;
+          if (pur.mode) setMode(pur.mode);
+          if (pur.supplierBillNo) setSupplierBillNo(pur.supplierBillNo);
+          if (pur.vehicleNo) setVehicleNo(pur.vehicleNo);
+          if (pur.date) setDate(pur.date.split('T')[0]);
+          if (pur.partyId) {
+            setParty(typeof pur.partyId === 'object' ? pur.partyId : { _id: pur.partyId, name: pur.partyName || 'Supplier' });
+          }
+          if (pur.items && pur.items.length > 0) {
+            setRows(pur.items.map((it) => ({
+              itemId: it.itemId || it.item || null,
+              description: it.description || it.name || '',
+              hsn: it.hsn || '',
+              qty: it.qty !== undefined && it.qty !== null ? String(it.qty) : '',
+              unit: it.unit || 'CFT',
+              rate: it.rate !== undefined && it.rate !== null ? String(it.rate) : '',
+              discPercent: it.discPercent !== undefined && it.discPercent !== null ? String(it.discPercent) : '',
+              taxPercent: it.taxPercent !== undefined ? it.taxPercent : null,
+              amount: it.amount || 0,
+              cgstAmount: it.cgstAmount || 0,
+              sgstAmount: it.sgstAmount || 0,
+              igstAmount: it.igstAmount || 0,
+              total: it.total || 0
+            })));
+          }
         }
       }
     } catch (err) {
@@ -81,63 +125,72 @@ export default function PurchaseEntryScreen({ navigation }) {
   };
 
   const selectItemForRow = (index, item) => {
+    clearRowError(index, 'item');
     const updated = [...rows];
-    updated[index] = {
-      ...updated[index],
-      itemId: item._id || item.id,
-      description: item.name,
-      hsn: item.hsn || '4407',
-      unit: item.unit || 'CFT',
-      rate: String(item.purchaseRate || item.saleRate || 1000)
-    };
+    const row = { ...updated[index] };
+    row.itemId = item._id || item.id;
+    row.description = item.name;
+    row.hsn = item.hsn || '4407';
+    row.unit = item.unit || 'CFT';
+    if (!row.rate && (item.purchaseRate || item.saleRate)) {
+      row.rate = String(item.purchaseRate || item.saleRate);
+      clearRowError(index, 'rate');
+    }
+    if (row.taxPercent === null || row.taxPercent === undefined) {
+      if (item.cgstRate !== undefined && (item.cgstRate + (item.sgstRate || 0)) > 0) {
+        row.taxPercent = item.cgstRate + (item.sgstRate || 0);
+        clearRowError(index, 'tax');
+      }
+    }
+    updated[index] = row;
     recalculateRow(updated, index);
   };
 
   const updateRowField = (index, field, value) => {
+    clearRowError(index, field);
     const updated = [...rows];
     updated[index] = { ...updated[index], [field]: value };
     recalculateRow(updated, index);
   };
 
   const recalculateRow = (rowsArr, index) => {
-    const row = rowsArr[index];
-    const qty = parseFloat(row.qty) || 1;
-    const rate = parseFloat(row.rate) || 0;
-    const disc = parseFloat(row.discPercent) || 0;
+    const row = { ...rowsArr[index] };
+    const qStr = (row.qty !== undefined && row.qty !== null ? String(row.qty) : '').trim();
+    const rStr = (row.rate !== undefined && row.rate !== null ? String(row.rate) : '').trim();
+    const dStr = (row.discPercent !== undefined && row.discPercent !== null ? String(row.discPercent) : '').trim();
 
-    let line = qty * rate;
-    if (disc > 0) line -= (line * disc) / 100;
-    row.amount = parseFloat(line.toFixed(2));
+    const qty = parseFloat(qStr) || 0;
+    const rate = parseFloat(rStr) || 0;
+    const disc = parseFloat(dStr) || 0;
 
-    const isLocal = true;
-    const tax = calculateGst(row.amount, row.taxPercent || 18, isLocal);
-    row.cgstAmount = tax.cgstAmount;
-    row.sgstAmount = tax.sgstAmount;
-    row.igstAmount = tax.igstAmount;
-    row.total = parseFloat((row.amount + tax.taxTotal).toFixed(2));
+    let amount = 0;
+    if (row.itemId && qty > 0 && rate > 0) {
+      let line = qty * rate;
+      if (disc > 0) line -= (line * disc) / 100;
+      amount = parseFloat(line.toFixed(2));
+    }
+    row.amount = amount;
+
+    if (amount > 0 && row.taxPercent !== null && row.taxPercent !== undefined) {
+      const isLocal = true;
+      const tax = calculateGst(amount, row.taxPercent, isLocal);
+      row.cgstAmount = tax.cgstAmount;
+      row.sgstAmount = tax.sgstAmount;
+      row.igstAmount = tax.igstAmount;
+      row.total = parseFloat((amount + tax.taxTotal).toFixed(2));
+    } else {
+      row.cgstAmount = 0;
+      row.sgstAmount = 0;
+      row.igstAmount = 0;
+      row.total = amount;
+    }
 
     rowsArr[index] = row;
     setRows([...rowsArr]);
   };
 
   const addRow = () => {
-    const defaultItem = itemsMaster[0] || {};
-    const newRow = {
-      itemId: defaultItem._id || null,
-      description: defaultItem.name || 'Timber Item',
-      hsn: defaultItem.hsn || '4407',
-      qty: '50',
-      unit: defaultItem.unit || 'CFT',
-      rate: String(defaultItem.purchaseRate || 1000),
-      discPercent: '0',
-      taxPercent: 18,
-      amount: 50000,
-      cgstAmount: 4500,
-      sgstAmount: 4500,
-      igstAmount: 0,
-      total: 59000
-    };
-    setRows([...rows, newRow]);
+    setRows((prev) => [...prev, createEmptyPurchaseRow()]);
   };
 
   const removeRow = (index) => {
@@ -164,8 +217,44 @@ export default function PurchaseEntryScreen({ navigation }) {
   const { roundOff, grandTotal } = calculateRoundOff(gross);
 
   const handleSave = async () => {
+    const newFormErrors = {};
     if (!party) {
+      newFormErrors.party = 'Supplier required';
+    }
+
+    if (rows.length === 0) {
+      Alert.alert('Items Required', 'Please add at least one timber item.');
+      return;
+    }
+
+    const newRowErrors = {};
+    let hasRowError = false;
+
+    rows.forEach((row, idx) => {
+      const errs = {};
+      if (!row.itemId) errs.item = 'Select timber item';
+      const q = parseFloat(row.qty);
+      const r = parseFloat(row.rate);
+      if (!row.qty || isNaN(q) || q <= 0) errs.qty = 'Enter quantity';
+      if (!row.rate || isNaN(r) || r <= 0) errs.rate = 'Enter rate';
+      if (row.taxPercent === null || row.taxPercent === undefined) errs.tax = 'Select GST slab';
+
+      if (Object.keys(errs).length > 0) {
+        newRowErrors[idx] = errs;
+        hasRowError = true;
+      }
+    });
+
+    setFormErrors(newFormErrors);
+    setRowErrors(newRowErrors);
+
+    if (newFormErrors.party) {
       Alert.alert('Supplier Required', 'Please select a supplier ledger.');
+      return;
+    }
+
+    if (hasRowError) {
+      Alert.alert('Incomplete Row(s)', 'Please fill all required item details, positive quantities/rates, and select GST slab.');
       return;
     }
 
@@ -213,13 +302,20 @@ export default function PurchaseEntryScreen({ navigation }) {
             onChange={(idx) => setMode(idx === 0 ? 'Credit' : 'Cash')}
           />
 
-          <Text style={[styles.fieldLabel, { marginTop: 12 }]}>SUPPLIER / CREDITOR *</Text>
+          <Text style={[styles.fieldLabel, { marginTop: 12 }, formErrors.party && { color: colors.errorText }]}>
+            SUPPLIER / CREDITOR * {formErrors.party ? `(${formErrors.party})` : ''}
+          </Text>
           <TouchableOpacity
-            style={styles.partySelectBtn}
-            onPress={() => setShowPartyPicker(true)}
+            style={[styles.partySelectBtn, formErrors.party && { borderColor: colors.errorText, borderWidth: 1 }]}
+            onPress={() => {
+              setFormErrors((prev) => ({ ...prev, party: null }));
+              setShowPartyPicker(true);
+            }}
           >
             <View style={{ flex: 1 }}>
-              <Text style={styles.partyName}>{party ? party.name : 'Select supplier...'}</Text>
+              <Text style={[styles.partyName, !party && { color: colors.placeholder }]}>
+                {party ? party.name : 'Select supplier...'}
+              </Text>
               {party && (
                 <Text style={styles.partySub}>
                   {party.city} • Bal: {formatINR(party.currentBalance || 0)} {party.currentBalanceType || 'Cr'}
@@ -260,18 +356,26 @@ export default function PurchaseEntryScreen({ navigation }) {
         {rows.map((row, index) => (
           <View key={index} style={styles.itemCard}>
             <View style={styles.itemCardHeader}>
-              <TouchableOpacity
-                style={styles.itemPickerTrigger}
-                onPress={() => {
-                  setActiveRowIndex(index);
-                  setShowItemPicker(true);
-                }}
-              >
-                <Text style={styles.itemRowTitle}>
-                  {index + 1}. {row.description || 'Tap to choose timber...'}
-                </Text>
-                <Ionicons name="create-outline" size={16} color={colors.goldDark} />
-              </TouchableOpacity>
+              <View style={{ flex: 1 }}>
+                <TouchableOpacity
+                  style={[
+                    styles.itemPickerTrigger,
+                    rowErrors[index]?.item && { borderColor: colors.errorText, borderWidth: 1, borderRadius: 6, padding: 4 }
+                  ]}
+                  onPress={() => {
+                    setActiveRowIndex(index);
+                    setShowItemPicker(true);
+                  }}
+                >
+                  <Text style={[styles.itemRowTitle, !row.description && { color: colors.placeholder }]}>
+                    {index + 1}. {row.description || 'Tap to choose timber... *'}
+                  </Text>
+                  <Ionicons name="create-outline" size={16} color={colors.goldDark} />
+                </TouchableOpacity>
+                {rowErrors[index]?.item && (
+                  <Text style={styles.inlineRowError}>{rowErrors[index].item}</Text>
+                )}
+              </View>
 
               <TouchableOpacity onPress={() => removeRow(index)} style={styles.deleteRowBtn}>
                 <Ionicons name="trash-outline" size={18} color={colors.errorText} />
@@ -281,24 +385,60 @@ export default function PurchaseEntryScreen({ navigation }) {
             <View style={styles.row}>
               <CustomInput
                 label={`Quantity (${row.unit})`}
+                placeholder="50"
                 value={row.qty}
                 onChangeText={(v) => updateRowField(index, 'qty', v)}
+                error={rowErrors[index]?.qty}
                 keyboardType="numeric"
                 containerStyle={{ flex: 1, marginRight: 8 }}
               />
               <CustomInput
                 label={`Purchase Rate / ${row.unit}`}
+                placeholder="1100"
                 value={row.rate}
                 onChangeText={(v) => updateRowField(index, 'rate', v)}
+                error={rowErrors[index]?.rate}
                 keyboardType="numeric"
                 prefix="₹"
                 containerStyle={{ flex: 1 }}
               />
             </View>
 
+            {/* Quick Tax Slab Selector */}
+            <View style={{ marginBottom: 10, marginTop: 4 }}>
+              <Text style={{ fontSize: 11, fontWeight: '700', color: rowErrors[index]?.tax ? colors.errorText : colors.textSecondary, marginBottom: 5 }}>
+                GST RATE SLAB {row.taxPercent === null || row.taxPercent === undefined ? '(Select slab *)' : `(${row.taxPercent}%)`}
+              </Text>
+              <View style={{ flexDirection: 'row', gap: 6 }}>
+                {[
+                  { label: '5% (Firewood)', rate: 5 },
+                  { label: '12%', rate: 12 },
+                  { label: '18% (Timber)', rate: 18 },
+                  { label: '0%', rate: 0 }
+                ].map((tax) => {
+                  const isSel = row.taxPercent !== null && row.taxPercent !== undefined && row.taxPercent === tax.rate;
+                  return (
+                    <TouchableOpacity
+                      key={tax.rate}
+                      style={[styles.taxChip, isSel && styles.taxChipSelected]}
+                      onPress={() => updateRowField(index, 'taxPercent', tax.rate)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[styles.taxChipText, isSel && styles.taxChipTextSelected]}>
+                        {tax.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+              {rowErrors[index]?.tax && (
+                <Text style={styles.inlineRowError}>{rowErrors[index].tax}</Text>
+              )}
+            </View>
+
             <View style={styles.rowTotalBar}>
               <Text style={styles.rowGstText}>
-                GST ({row.taxPercent || 18}%): {formatINR((row.cgstAmount || 0) + (row.sgstAmount || 0))}
+                GST ({row.taxPercent !== null && row.taxPercent !== undefined ? `${row.taxPercent}%` : 'Unselected'}): {formatINR((row.cgstAmount || 0) + (row.sgstAmount || 0))}
               </Text>
               <Text style={styles.rowTotalText}>Total: {formatINR(row.total || 0)}</Text>
             </View>
@@ -466,11 +606,38 @@ const styles = StyleSheet.create({
     color: colors.navyPrimary,
     marginRight: 6
   },
+  inlineRowError: {
+    fontSize: 11,
+    color: colors.errorText,
+    marginTop: 3,
+    fontWeight: '500'
+  },
   deleteRowBtn: {
     width: 36,
     height: 36,
     alignItems: 'center',
     justifyContent: 'center'
+  },
+  taxChip: {
+    backgroundColor: colors.surfaceBg,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: colors.border
+  },
+  taxChipSelected: {
+    backgroundColor: colors.goldPrimary,
+    borderColor: colors.goldDark
+  },
+  taxChipText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.navyDark
+  },
+  taxChipTextSelected: {
+    fontWeight: '700',
+    color: colors.navyDark
   },
   rowTotalBar: {
     flexDirection: 'row',

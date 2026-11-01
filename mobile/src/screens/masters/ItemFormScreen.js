@@ -35,8 +35,8 @@ export default function ItemFormScreen({ route, navigation }) {
     igstRate: '18',
     saleRate: '',
     purchaseRate: '',
-    openingQty: '0',
-    reorderLevel: '50'
+    openingQty: '',
+    reorderLevel: ''
   });
 
   const [errors, setErrors] = useState({});
@@ -60,10 +60,10 @@ export default function ItemFormScreen({ route, navigation }) {
           cgstRate: String(res.item.cgstRate || 9),
           sgstRate: String(res.item.sgstRate || 9),
           igstRate: String(res.item.igstRate || 18),
-          saleRate: String(res.item.saleRate || ''),
-          purchaseRate: String(res.item.purchaseRate || ''),
-          openingQty: String(res.item.openingQty || 0),
-          reorderLevel: String(res.item.reorderLevel || 50)
+          saleRate: res.item.saleRate !== undefined && res.item.saleRate !== null ? String(res.item.saleRate) : '',
+          purchaseRate: res.item.purchaseRate !== undefined && res.item.purchaseRate !== null ? String(res.item.purchaseRate) : '',
+          openingQty: res.item.openingQty !== undefined && res.item.openingQty !== null ? String(res.item.openingQty) : '',
+          reorderLevel: res.item.reorderLevel !== undefined && res.item.reorderLevel !== null ? String(res.item.reorderLevel) : ''
         });
       }
     } catch (err) {
@@ -304,7 +304,7 @@ export default function ItemFormScreen({ route, navigation }) {
               <View style={styles.row}>
                 <CustomInput
                   label={`Sale Rate / ${form.unit}`}
-                  placeholder="0.00"
+                  placeholder="2400"
                   value={form.saleRate}
                   onChangeText={(v) => update('saleRate', v)}
                   keyboardType="numeric"
@@ -313,7 +313,7 @@ export default function ItemFormScreen({ route, navigation }) {
                 />
                 <CustomInput
                   label={`Purchase Rate / ${form.unit}`}
-                  placeholder="0.00"
+                  placeholder="1800"
                   value={form.purchaseRate}
                   onChangeText={(v) => update('purchaseRate', v)}
                   keyboardType="numeric"
@@ -325,7 +325,7 @@ export default function ItemFormScreen({ route, navigation }) {
               <View style={styles.row}>
                 <CustomInput
                   label={`Opening Stock (${form.unit})`}
-                  placeholder="0.00"
+                  placeholder="0"
                   value={form.openingQty}
                   onChangeText={(v) => update('openingQty', v)}
                   keyboardType="numeric"

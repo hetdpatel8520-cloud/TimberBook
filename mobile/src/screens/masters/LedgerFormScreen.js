@@ -57,10 +57,10 @@ export default function LedgerFormScreen({ route, navigation }) {
     state: 'Tamil Nadu',
     phone: '',
     email: '',
-    openingBalance: '0',
+    openingBalance: '',
     openingBalanceType: 'Dr',
-    creditDays: '30',
-    creditLimit: '0'
+    creditDays: '',
+    creditLimit: ''
   });
 
   const [errors, setErrors] = useState({});
@@ -104,10 +104,10 @@ export default function LedgerFormScreen({ route, navigation }) {
           state: res.ledger.state || 'Tamil Nadu',
           phone: res.ledger.phone || '',
           email: res.ledger.email || '',
-          openingBalance: String(res.ledger.openingBalance || 0),
+          openingBalance: res.ledger.openingBalance !== undefined && res.ledger.openingBalance !== null ? String(res.ledger.openingBalance) : '',
           openingBalanceType: res.ledger.openingBalanceType || 'Dr',
-          creditDays: String(res.ledger.creditDays || 30),
-          creditLimit: String(res.ledger.creditLimit || 0)
+          creditDays: res.ledger.creditDays !== undefined && res.ledger.creditDays !== null ? String(res.ledger.creditDays) : '',
+          creditLimit: res.ledger.creditLimit !== undefined && res.ledger.creditLimit !== null ? String(res.ledger.creditLimit) : ''
         });
       }
     } catch (err) {
@@ -314,7 +314,7 @@ export default function LedgerFormScreen({ route, navigation }) {
                 />
                 <CustomInput
                   label="Pincode"
-                  placeholder="Pincode"
+                  placeholder="e.g. 641001"
                   value={form.pincode}
                   onChangeText={(v) => update('pincode', v)}
                   keyboardType="numeric"
@@ -342,7 +342,7 @@ export default function LedgerFormScreen({ route, navigation }) {
               <View style={styles.row}>
                 <CustomInput
                   label="Phone Number"
-                  placeholder="Mobile"
+                  placeholder="e.g. 9876543210"
                   value={form.phone}
                   onChangeText={(v) => update('phone', v)}
                   keyboardType="phone-pad"
@@ -350,7 +350,7 @@ export default function LedgerFormScreen({ route, navigation }) {
                 />
                 <CustomInput
                   label="Email"
-                  placeholder="Email"
+                  placeholder="e.g. name@example.com"
                   value={form.email}
                   onChangeText={(v) => update('email', v)}
                   keyboardType="email-address"

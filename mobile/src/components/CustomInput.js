@@ -16,7 +16,9 @@ export default function CustomInput({
   prefix,
   editable = true,
   autoCapitalize = 'none',
-  containerStyle
+  containerStyle,
+  inputStyle,
+  placeholderTextColor = colors.placeholder || '#B8C0CC'
 }) {
   return (
     <View style={[styles.container, containerStyle]}>
@@ -33,12 +35,13 @@ export default function CustomInput({
           style={[
             styles.input,
             multiline ? styles.multilineInput : null,
-            !editable ? styles.disabledText : null
+            !editable ? styles.disabledText : null,
+            inputStyle
           ]}
           value={value !== undefined && value !== null ? String(value) : ''}
           onChangeText={onChangeText}
           placeholder={placeholder}
-          placeholderTextColor={colors.textMuted}
+          placeholderTextColor={placeholderTextColor}
           keyboardType={keyboardType}
           secureTextEntry={secureTextEntry}
           multiline={multiline}
