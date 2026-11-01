@@ -72,17 +72,37 @@ export default function SalesRegisterScreen({ navigation }) {
             <View style={styles.summaryRow}>
               <View style={styles.col}>
                 <Text style={styles.summaryLabel}>TAXABLE SALES</Text>
-                <Text style={styles.summaryVal}>{formatINR(data?.summary?.totalTaxable || 0)}</Text>
+                <Text
+                  style={styles.summaryVal}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.7}
+                  maxFontSizeMultiplier={1.3}
+                >
+                  {formatINR(data?.summary?.totalTaxable || 0)}
+                </Text>
               </View>
               <View style={styles.col}>
                 <Text style={styles.summaryLabel}>TOTAL GST</Text>
-                <Text style={[styles.summaryVal, { color: colors.goldPrimary }]}>
+                <Text
+                  style={[styles.summaryVal, { color: colors.goldPrimary }]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.7}
+                  maxFontSizeMultiplier={1.3}
+                >
                   {formatINR(data?.summary?.totalTax || 0)}
                 </Text>
               </View>
               <View style={styles.col}>
                 <Text style={styles.summaryLabel}>NET TURNOVER</Text>
-                <Text style={[styles.summaryVal, { color: colors.white }]}>
+                <Text
+                  style={[styles.summaryVal, { color: colors.white }]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.7}
+                  maxFontSizeMultiplier={1.3}
+                >
                   {formatINR(data?.summary?.totalNet || 0)}
                 </Text>
               </View>

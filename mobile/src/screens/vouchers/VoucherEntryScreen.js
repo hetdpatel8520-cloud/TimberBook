@@ -197,14 +197,26 @@ export default function VoucherEntryScreen({ route, navigation }) {
         <View style={styles.accountingPreviewBox}>
           <View style={styles.previewCol}>
             <Text style={styles.previewLabel}>DEBIT (+) :</Text>
-            <Text style={styles.previewAccount} numberOfLines={1}>
+            <Text
+              style={styles.previewAccount}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.8}
+              maxFontSizeMultiplier={1.2}
+            >
               {isReceipt ? selectedCashBank?.name : selectedParty?.name || 'Account'}
             </Text>
           </View>
           <Ionicons name="arrow-forward" size={16} color={colors.goldPrimary} />
           <View style={styles.previewCol}>
             <Text style={styles.previewLabel}>CREDIT (-) :</Text>
-            <Text style={styles.previewAccount} numberOfLines={1}>
+            <Text
+              style={styles.previewAccount}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.8}
+              maxFontSizeMultiplier={1.2}
+            >
               {isReceipt ? selectedParty?.name : selectedCashBank?.name || 'Account'}
             </Text>
           </View>

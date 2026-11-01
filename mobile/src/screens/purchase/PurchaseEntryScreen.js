@@ -18,9 +18,11 @@ import PartyPickerModal from '../../components/PartyPickerModal';
 import ItemPickerModal from '../../components/ItemPickerModal';
 import { ledgersApi, itemsApi, purchasesApi } from '../../api/client';
 import { calculateGst, calculateRoundOff, formatINR } from '../../utils/timberMath';
+import { useResponsive } from '../../utils/responsive';
 
 export default function PurchaseEntryScreen({ route, navigation }) {
   const insets = useSafeAreaInsets();
+  const { isSmall } = useResponsive();
   const [mode, setMode] = useState('Credit');
   const [supplierBillNo, setSupplierBillNo] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -332,13 +334,13 @@ export default function PurchaseEntryScreen({ route, navigation }) {
             <Ionicons name="chevron-forward" size={20} color={colors.goldPrimary} />
           </TouchableOpacity>
 
-          <View style={styles.row}>
+          <View style={[styles.row, isSmall && { flexDirection: 'column' }]}>
             <CustomInput
               label="Supplier Bill No"
               placeholder="e.g. MSM/992"
               value={supplierBillNo}
               onChangeText={setSupplierBillNo}
-              containerStyle={{ flex: 1, marginRight: 8 }}
+              containerStyle={{ flex: isSmall ? undefined : 1, marginRight: isSmall ? 0 : 8, marginBottom: isSmall ? 8 : 0 }}
             />
             <CustomInput
               label="Vehicle No"
@@ -346,7 +348,7 @@ export default function PurchaseEntryScreen({ route, navigation }) {
               value={vehicleNo}
               onChangeText={setVehicleNo}
               autoCapitalize="characters"
-              containerStyle={{ flex: 1 }}
+              containerStyle={{ flex: isSmall ? undefined : 1 }}
             />
           </View>
         </View>
@@ -389,7 +391,7 @@ export default function PurchaseEntryScreen({ route, navigation }) {
               </TouchableOpacity>
             </View>
 
-            <View style={styles.row}>
+            <View style={[styles.row, isSmall && { flexDirection: 'column' }]}>
               <CustomInput
                 label={`Quantity (${row.unit})`}
                 placeholder="50"
@@ -397,7 +399,7 @@ export default function PurchaseEntryScreen({ route, navigation }) {
                 onChangeText={(v) => updateRowField(index, 'qty', v)}
                 error={rowErrors[index]?.qty}
                 keyboardType="numeric"
-                containerStyle={{ flex: 1, marginRight: 8 }}
+                containerStyle={{ flex: isSmall ? undefined : 1, marginRight: isSmall ? 0 : 8, marginBottom: isSmall ? 8 : 0 }}
               />
               <CustomInput
                 label={`Purchase Rate / ${row.unit}`}
@@ -407,7 +409,7 @@ export default function PurchaseEntryScreen({ route, navigation }) {
                 error={rowErrors[index]?.rate}
                 keyboardType="numeric"
                 prefix="₹"
-                containerStyle={{ flex: 1 }}
+                containerStyle={{ flex: isSmall ? undefined : 1 }}
               />
             </View>
 
@@ -469,7 +471,15 @@ export default function PurchaseEntryScreen({ route, navigation }) {
           </View>
           <View style={styles.grandTotalBar}>
             <Text style={styles.grandTotalLabel}>NET PAYABLE:</Text>
-            <Text style={styles.grandTotalValue}>{formatINR(grandTotal)}</Text>
+            <Text
+              style={styles.grandTotalValue}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.7}
+              maxFontSizeMultiplier={1.3}
+            >
+              {formatINR(grandTotal)}
+            </Text>
           </View>
         </View>
 

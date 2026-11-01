@@ -14,9 +14,12 @@ import { useAuth } from '../../context/AuthContext';
 import { reportsApi, syncApi } from '../../api/client';
 import { useTranslation, AVAILABLE_LANGUAGES } from '../../i18n/LanguageContext';
 import ActionTile from '../../components/ActionTile';
+import { useResponsive } from '../../utils/responsive';
 
 export default function DashboardScreen({ navigation }) {
   const insets = useSafeAreaInsets();
+  const { isSmall, isTablet, tileColumns } = useResponsive();
+  const tileWidth = isTablet ? '23.8%' : isSmall ? '48.5%' : '31.8%';
   const { company, financialYear } = useAuth();
   const { t, language, setLanguage } = useTranslation();
 
@@ -94,6 +97,35 @@ export default function DashboardScreen({ navigation }) {
     }
   };
 
+  const renderTilesGrid = (tiles) => {
+    const totalTiles = tiles.length;
+    const remainder = totalTiles % tileColumns;
+    const spacersCount = remainder === 0 ? 0 : tileColumns - remainder;
+    const spacers = Array.from({ length: spacersCount });
+
+    return (
+      <View style={styles.tilesGrid}>
+        {tiles.map((t, idx) => (
+          <ActionTile
+            key={t.title || idx}
+            title={t.title}
+            subtitle={t.subtitle}
+            icon={t.icon}
+            isPrimary={t.isPrimary}
+            badge={t.badge}
+            onPress={t.onPress}
+            style={{ width: tileWidth, marginHorizontal: '0.7%', marginVertical: 4 }}
+          />
+        ))}
+        {spacers.map((_, i) => (
+          <View
+            key={`spacer-${i}`}
+            style={{ width: tileWidth, marginHorizontal: '0.7%', marginVertical: 4 }}
+          />
+        ))}
+      </View>
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -284,101 +316,101 @@ export default function DashboardScreen({ navigation }) {
 
         {/* 1. ENTRY TILES */}
         <Text style={styles.sectionHeading}>{t('quickEntry').toUpperCase()}</Text>
-        <View style={styles.tilesGrid}>
-          <ActionTile
-            title={t('billInvoice')}
-            subtitle="GST Tax Invoice"
-            icon="document-text"
-            isPrimary
-            badge="NEW"
-            onPress={() => navigation.navigate('BillEntry')}
-          />
-          <ActionTile
-            title={t('purchase')}
-            subtitle="Inward Stock"
-            icon="cart"
-            onPress={() => navigation.navigate('PurchaseEntry')}
-          />
-          <ActionTile
-            title={t('receipt')}
-            subtitle="Customer Inflow"
-            icon="arrow-down-circle"
-            onPress={() => navigation.navigate('VoucherEntry', { initialType: 'Receipt' })}
-          />
-          <ActionTile
-            title={t('payment')}
-            subtitle="Supplier Outflow"
-            icon="arrow-up-circle"
-            onPress={() => navigation.navigate('VoucherEntry', { initialType: 'Payment' })}
-          />
-          <ActionTile
-            title={t('contra')}
-            subtitle="Bank ↔ Cash"
-            icon="swap-horizontal"
-            onPress={() => navigation.navigate('VoucherEntry', { initialType: 'Contra' })}
-          />
-        </View>
+        {renderTilesGrid([
+          {
+            title: t('billInvoice'),
+            subtitle: 'GST Tax Invoice',
+            icon: 'document-text',
+            isPrimary: true,
+            badge: 'NEW',
+            onPress: () => navigation.navigate('BillEntry')
+          },
+          {
+            title: t('purchase'),
+            subtitle: 'Inward Stock',
+            icon: 'cart',
+            onPress: () => navigation.navigate('PurchaseEntry')
+          },
+          {
+            title: t('receipt'),
+            subtitle: 'Customer Inflow',
+            icon: 'arrow-down-circle',
+            onPress: () => navigation.navigate('VoucherEntry', { initialType: 'Receipt' })
+          },
+          {
+            title: t('payment'),
+            subtitle: 'Supplier Outflow',
+            icon: 'arrow-up-circle',
+            onPress: () => navigation.navigate('VoucherEntry', { initialType: 'Payment' })
+          },
+          {
+            title: t('contra'),
+            subtitle: 'Bank ↔ Cash',
+            icon: 'swap-horizontal',
+            onPress: () => navigation.navigate('VoucherEntry', { initialType: 'Contra' })
+          }
+        ])}
 
         {/* 2. REPORT TILES */}
         <Text style={styles.sectionHeading}>{t('reports').toUpperCase()}</Text>
-        <View style={styles.tilesGrid}>
-          <ActionTile
-            title="Finance Dashboard"
-            subtitle="All Reports & Analytics"
-            icon="bar-chart"
-            isPrimary
-            badge="ALL"
-            onPress={() => navigation.navigate('AllReports')}
-          />
-          <ActionTile
-            title={t('ledgerReport')}
-            subtitle="Party Statement"
-            icon="reader-outline"
-            onPress={() => navigation.navigate('LedgerReport')}
-          />
-          <ActionTile
-            title={t('cashBook')}
-            subtitle="Daily Register"
-            icon="book-outline"
-            onPress={() => navigation.navigate('CashBook')}
-          />
-          <ActionTile
-            title={t('outstanding')}
-            subtitle="Receivables / Payables"
-            icon="time-outline"
-            badge="REMIND"
-            onPress={() => navigation.navigate('Outstanding')}
-          />
-          <ActionTile
-            title={t('salesRegister')}
-            subtitle="GST Sales Book"
-            icon="newspaper-outline"
-            onPress={() => navigation.navigate('SalesRegister')}
-          />
-          <ActionTile
-            title={t('purchaseRegister')}
-            subtitle="GST Purchase Book"
-            icon="file-tray-full-outline"
-            onPress={() => navigation.navigate('PurchaseRegister')}
-          />
-        </View>
+        {renderTilesGrid([
+          {
+            title: 'Finance Dashboard',
+            subtitle: 'All Reports & Analytics',
+            icon: 'bar-chart',
+            isPrimary: true,
+            badge: 'ALL',
+            onPress: () => navigation.navigate('AllReports')
+          },
+          {
+            title: t('ledgerReport'),
+            subtitle: 'Party Statement',
+            icon: 'reader-outline',
+            onPress: () => navigation.navigate('LedgerReport')
+          },
+          {
+            title: t('cashBook'),
+            subtitle: 'Daily Register',
+            icon: 'book-outline',
+            onPress: () => navigation.navigate('CashBook')
+          },
+          {
+            title: t('outstanding'),
+            subtitle: 'Receivables / Payables',
+            icon: 'time-outline',
+            badge: 'REMIND',
+            onPress: () => navigation.navigate('Outstanding')
+          },
+          {
+            title: t('salesRegister'),
+            subtitle: 'GST Sales Book',
+            icon: 'newspaper-outline',
+            onPress: () => navigation.navigate('SalesRegister')
+          },
+          {
+            title: t('purchaseRegister'),
+            subtitle: 'GST Purchase Book',
+            icon: 'file-tray-full-outline',
+            onPress: () => navigation.navigate('PurchaseRegister')
+          }
+        ])}
 
         {/* 3. MASTER TILES */}
         <Text style={styles.sectionHeading}>{t('masters').toUpperCase()}</Text>
-        <View style={styles.tilesGrid}>
-          <ActionTile
-            title={t('ledgerMaster')}
-            subtitle="Customers & Suppliers"
-            icon="people-outline"
-            onPress={() => navigation.navigate('LedgerList')}
-          />
-          <ActionTile
-            title={t('itemMaster')}
-            subtitle="Timber Species & Sizes"
-            icon="file-tray-stacked-outline"
-            onPress={() => navigation.navigate('ItemList')}
-          />
-        </View>
+        {renderTilesGrid([
+          {
+            title: t('ledgerMaster'),
+            subtitle: 'Customers & Suppliers',
+            icon: 'people-outline',
+            onPress: () => navigation.navigate('LedgerList')
+          },
+          {
+            title: t('itemMaster'),
+            subtitle: 'Timber Species & Sizes',
+            icon: 'file-tray-stacked-outline',
+            onPress: () => navigation.navigate('ItemList')
+          }
+        ])}
       </ScrollView>
 
       {/* Floating Action Button for Quick Bill Entry */}
@@ -608,7 +640,8 @@ const styles = StyleSheet.create({
   tilesGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginHorizontal: -4,
+    justifyContent: 'flex-start',
+    marginHorizontal: -2,
     marginBottom: 10
   },
   fab: {

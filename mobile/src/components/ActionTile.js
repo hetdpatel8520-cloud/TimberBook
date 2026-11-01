@@ -9,39 +9,61 @@ export default function ActionTile({
   icon,
   onPress,
   badgeCount,
-  accent = false
+  badge,
+  accent = false,
+  isPrimary = false,
+  style
 }) {
+  const isAccent = accent || isPrimary;
+  const badgeLabel = badge !== undefined ? badge : badgeCount;
+  const showBadge = badgeLabel !== undefined && badgeLabel !== null && badgeLabel !== '';
+
   return (
     <TouchableOpacity
       activeOpacity={0.7}
       onPress={onPress}
       style={[
         styles.tile,
-        accent && styles.tileAccent
+        isAccent && styles.tileAccent,
+        style
       ]}
     >
-      <View style={[styles.iconContainer, accent && styles.iconContainerAccent]}>
+      <View style={[styles.iconContainer, isAccent && styles.iconContainerAccent]}>
         <Ionicons
           name={icon}
           size={24}
-          color={accent ? colors.navyDark : colors.goldPrimary}
+          color={isAccent ? colors.navyDark : colors.goldPrimary}
         />
-        {badgeCount !== undefined && badgeCount > 0 && (
+        {showBadge && (
           <View style={styles.badge}>
-            <Text style={styles.badgeText}>{badgeCount}</Text>
+            <Text style={styles.badgeText} numberOfLines={1}>
+              {badgeLabel}
+            </Text>
           </View>
         )}
       </View>
 
-      <Text style={[styles.title, accent && styles.titleAccent]} numberOfLines={1}>
+      <Text
+        style={[styles.title, isAccent && styles.titleAccent]}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.8}
+        maxFontSizeMultiplier={1.2}
+      >
         {title}
       </Text>
 
-      {subtitle && (
-        <Text style={[styles.subtitle, accent && styles.subtitleAccent]} numberOfLines={1}>
+      {subtitle ? (
+        <Text
+          style={[styles.subtitle, isAccent && styles.subtitleAccent]}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.8}
+          maxFontSizeMultiplier={1.2}
+        >
           {subtitle}
         </Text>
-      )}
+      ) : null}
     </TouchableOpacity>
   );
 }
@@ -56,7 +78,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     minHeight: 90,
-    minWidth: 84,
+    minWidth: 70,
     shadowColor: colors.navyDark,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,

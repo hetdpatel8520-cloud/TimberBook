@@ -17,9 +17,11 @@ import Header from '../../components/Header';
 import CustomInput from '../../components/CustomInput';
 import SegmentedControl from '../../components/SegmentedControl';
 import { itemsApi } from '../../api/client';
+import { useResponsive } from '../../utils/responsive';
 
 export default function ItemFormScreen({ route, navigation }) {
   const insets = useSafeAreaInsets();
+  const { isSmall } = useResponsive();
   const itemId = route?.params?.itemId;
   const isEdit = !!itemId;
 
@@ -202,16 +204,16 @@ export default function ItemFormScreen({ route, navigation }) {
                 error={errors.name}
               />
 
-              <View style={styles.row}>
+              <View style={[styles.row, isSmall && { flexDirection: 'column' }]}>
                 <CustomInput
                   label="HSN / SAC Code *"
                   placeholder="4407"
                   value={form.hsn}
                   onChangeText={(v) => update('hsn', v)}
                   error={errors.hsn}
-                  containerStyle={{ flex: 1, marginRight: 8 }}
+                  containerStyle={{ flex: isSmall ? undefined : 1, marginRight: isSmall ? 0 : 8, marginBottom: isSmall ? 8 : 0 }}
                 />
-                <View style={{ flex: 1.4 }}>
+                <View style={{ flex: isSmall ? undefined : 1.4 }}>
                   <Text style={styles.fieldLabel}>TIMBER GROUP</Text>
                   <SegmentedControl
                     options={['Sawn', 'Drum', 'Logs', 'Offcuts']}
@@ -308,7 +310,7 @@ export default function ItemFormScreen({ route, navigation }) {
             <View style={styles.card}>
               <Text style={styles.cardTitle}>Standard Rates & Stock</Text>
 
-              <View style={styles.row}>
+              <View style={[styles.row, isSmall && { flexDirection: 'column' }]}>
                 <CustomInput
                   label={`Sale Rate / ${form.unit}`}
                   placeholder="2400"
@@ -316,7 +318,7 @@ export default function ItemFormScreen({ route, navigation }) {
                   onChangeText={(v) => update('saleRate', v)}
                   keyboardType="numeric"
                   prefix="₹"
-                  containerStyle={{ flex: 1, marginRight: 8 }}
+                  containerStyle={{ flex: isSmall ? undefined : 1, marginRight: isSmall ? 0 : 8, marginBottom: isSmall ? 8 : 0 }}
                 />
                 <CustomInput
                   label={`Purchase Rate / ${form.unit}`}
@@ -325,11 +327,11 @@ export default function ItemFormScreen({ route, navigation }) {
                   onChangeText={(v) => update('purchaseRate', v)}
                   keyboardType="numeric"
                   prefix="₹"
-                  containerStyle={{ flex: 1 }}
+                  containerStyle={{ flex: isSmall ? undefined : 1 }}
                 />
               </View>
 
-              <View style={styles.row}>
+              <View style={[styles.row, isSmall && { flexDirection: 'column' }]}>
                 <CustomInput
                   label={`Opening Stock (${form.unit})`}
                   placeholder="0"
@@ -337,7 +339,7 @@ export default function ItemFormScreen({ route, navigation }) {
                   onChangeText={(v) => update('openingQty', v)}
                   keyboardType="numeric"
                   editable={!isEdit} // opening stock set once
-                  containerStyle={{ flex: 1, marginRight: 8 }}
+                  containerStyle={{ flex: isSmall ? undefined : 1, marginRight: isSmall ? 0 : 8, marginBottom: isSmall ? 8 : 0 }}
                 />
                 <CustomInput
                   label={`Low Stock Alert Level (${form.unit})`}
@@ -345,7 +347,7 @@ export default function ItemFormScreen({ route, navigation }) {
                   value={form.reorderLevel}
                   onChangeText={(v) => update('reorderLevel', v)}
                   keyboardType="numeric"
-                  containerStyle={{ flex: 1 }}
+                  containerStyle={{ flex: isSmall ? undefined : 1 }}
                 />
               </View>
             </View>

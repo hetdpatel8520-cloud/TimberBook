@@ -36,7 +36,13 @@ export default function MetricCard({
         )}
       </View>
 
-      <Text style={[styles.value, isHighlight && styles.valueHighlight]}>
+      <Text
+        style={[styles.value, isHighlight && styles.valueHighlight]}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.7}
+        maxFontSizeMultiplier={1.3}
+      >
         {value}
       </Text>
 

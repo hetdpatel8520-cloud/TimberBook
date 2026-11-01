@@ -17,9 +17,11 @@ import Header from '../../components/Header';
 import CustomInput from '../../components/CustomInput';
 import SegmentedControl from '../../components/SegmentedControl';
 import { ledgersApi } from '../../api/client';
+import { useResponsive } from '../../utils/responsive';
 
 export default function LedgerFormScreen({ route, navigation }) {
   const insets = useSafeAreaInsets();
+  const { isSmall } = useResponsive();
   const ledgerId = route?.params?.ledgerId;
   const isEdit = !!ledgerId;
 
@@ -278,7 +280,7 @@ export default function LedgerFormScreen({ route, navigation }) {
                 containerStyle={{ marginBottom: 12 }}
               />
 
-              <View style={styles.row}>
+              <View style={[styles.row, isSmall && { flexDirection: 'column' }]}>
                 <CustomInput
                   label="GSTIN"
                   placeholder="33AAAAA1234A1Z5"
@@ -286,7 +288,7 @@ export default function LedgerFormScreen({ route, navigation }) {
                   onChangeText={(v) => update('gstin', v.toUpperCase())}
                   error={errors.gstin}
                   autoCapitalize="characters"
-                  containerStyle={{ flex: 1, marginRight: 8 }}
+                  containerStyle={{ flex: isSmall ? undefined : 1, marginRight: isSmall ? 0 : 8, marginBottom: isSmall ? 8 : 0 }}
                 />
                 <CustomInput
                   label="PAN"
@@ -295,7 +297,7 @@ export default function LedgerFormScreen({ route, navigation }) {
                   onChangeText={(v) => update('pan', v.toUpperCase())}
                   error={errors.pan}
                   autoCapitalize="characters"
-                  containerStyle={{ width: 130 }}
+                  containerStyle={isSmall ? undefined : { width: 130 }}
                 />
               </View>
             </View>
@@ -311,13 +313,13 @@ export default function LedgerFormScreen({ route, navigation }) {
                 onChangeText={(v) => update('address', v)}
               />
 
-              <View style={styles.row}>
+              <View style={[styles.row, isSmall && { flexDirection: 'column' }]}>
                 <CustomInput
                   label="City"
                   placeholder="City"
                   value={form.city}
                   onChangeText={(v) => update('city', v)}
-                  containerStyle={{ flex: 1, marginRight: 8 }}
+                  containerStyle={{ flex: isSmall ? undefined : 1, marginRight: isSmall ? 0 : 8, marginBottom: isSmall ? 8 : 0 }}
                 />
                 <CustomInput
                   label="Pincode"
@@ -325,35 +327,35 @@ export default function LedgerFormScreen({ route, navigation }) {
                   value={form.pincode}
                   onChangeText={(v) => update('pincode', v)}
                   keyboardType="numeric"
-                  containerStyle={{ width: 110 }}
+                  containerStyle={isSmall ? undefined : { width: 110 }}
                 />
               </View>
 
-              <View style={styles.row}>
+              <View style={[styles.row, isSmall && { flexDirection: 'column' }]}>
                 <CustomInput
                   label="State"
                   placeholder="State"
                   value={form.state}
                   onChangeText={(v) => update('state', v)}
-                  containerStyle={{ flex: 1, marginRight: 8 }}
+                  containerStyle={{ flex: isSmall ? undefined : 1, marginRight: isSmall ? 0 : 8, marginBottom: isSmall ? 8 : 0 }}
                 />
                 <CustomInput
                   label="District"
                   placeholder="District"
                   value={form.district}
                   onChangeText={(v) => update('district', v)}
-                  containerStyle={{ flex: 1 }}
+                  containerStyle={{ flex: isSmall ? undefined : 1 }}
                 />
               </View>
 
-              <View style={styles.row}>
+              <View style={[styles.row, isSmall && { flexDirection: 'column' }]}>
                 <CustomInput
                   label="Phone Number"
                   placeholder="e.g. 9876543210"
                   value={form.phone}
                   onChangeText={(v) => update('phone', v)}
                   keyboardType="phone-pad"
-                  containerStyle={{ flex: 1, marginRight: 8 }}
+                  containerStyle={{ flex: isSmall ? undefined : 1, marginRight: isSmall ? 0 : 8, marginBottom: isSmall ? 8 : 0 }}
                 />
                 <CustomInput
                   label="Email"
@@ -361,7 +363,7 @@ export default function LedgerFormScreen({ route, navigation }) {
                   value={form.email}
                   onChangeText={(v) => update('email', v)}
                   keyboardType="email-address"
-                  containerStyle={{ flex: 1 }}
+                  containerStyle={{ flex: isSmall ? undefined : 1 }}
                 />
               </View>
             </View>
@@ -370,7 +372,7 @@ export default function LedgerFormScreen({ route, navigation }) {
             <View style={styles.card}>
               <Text style={styles.cardTitle}>Balance & Credit Terms</Text>
 
-              <View style={styles.row}>
+              <View style={[styles.row, isSmall && { flexDirection: 'column' }]}>
                 <CustomInput
                   label="Opening Balance (₹)"
                   placeholder="0.00"
@@ -378,9 +380,9 @@ export default function LedgerFormScreen({ route, navigation }) {
                   onChangeText={(v) => update('openingBalance', v)}
                   keyboardType="numeric"
                   prefix="₹"
-                  containerStyle={{ flex: 1, marginRight: 8 }}
+                  containerStyle={{ flex: isSmall ? undefined : 1, marginRight: isSmall ? 0 : 8, marginBottom: isSmall ? 8 : 0 }}
                 />
-                <View style={{ width: 120 }}>
+                <View style={isSmall ? { marginBottom: 8 } : { width: 120 }}>
                   <Text style={styles.fieldLabel}>BALANCE TYPE</Text>
                   <SegmentedControl
                     options={['Dr', 'Cr']}
@@ -390,7 +392,7 @@ export default function LedgerFormScreen({ route, navigation }) {
                 </View>
               </View>
 
-              <View style={styles.row}>
+              <View style={[styles.row, isSmall && { flexDirection: 'column' }]}>
                 <CustomInput
                   label="Credit Days"
                   placeholder="30"
@@ -398,7 +400,7 @@ export default function LedgerFormScreen({ route, navigation }) {
                   onChangeText={(v) => update('creditDays', v)}
                   keyboardType="numeric"
                   suffix="DAYS"
-                  containerStyle={{ flex: 1, marginRight: 8 }}
+                  containerStyle={{ flex: isSmall ? undefined : 1, marginRight: isSmall ? 0 : 8, marginBottom: isSmall ? 8 : 0 }}
                 />
                 <CustomInput
                   label="Credit Limit (₹)"
@@ -407,7 +409,7 @@ export default function LedgerFormScreen({ route, navigation }) {
                   onChangeText={(v) => update('creditLimit', v)}
                   keyboardType="numeric"
                   prefix="₹"
-                  containerStyle={{ flex: 1 }}
+                  containerStyle={{ flex: isSmall ? undefined : 1 }}
                 />
               </View>
             </View>

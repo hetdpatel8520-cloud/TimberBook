@@ -1,15 +1,31 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { colors } from '../theme/colors';
+import { useResponsive } from '../utils/responsive';
 
 export default function SegmentedControl({
   options = [],
   selectedIndex = 0,
   onChange,
-  containerStyle
+  containerStyle,
+  columns
 }) {
+  const { width, isSmall } = useResponsive();
+
+  // Auto-detect whether to display in a multi-column wrapping grid
+  const useGrid =
+    columns !== undefined
+      ? columns > 1
+      : (options.length >= 4 && width < 520) || (options.length === 3 && isSmall);
+
   return (
-    <View style={[styles.container, containerStyle]}>
+    <View
+      style={[
+        styles.container,
+        useGrid && styles.gridContainer,
+        containerStyle
+      ]}
+    >
       {options.map((option, index) => {
         const isSelected = selectedIndex === index;
         return (
@@ -19,6 +35,7 @@ export default function SegmentedControl({
             onPress={() => onChange && onChange(index)}
             style={[
               styles.segment,
+              useGrid && styles.gridSegment,
               isSelected ? styles.segmentSelected : null
             ]}
           >
@@ -28,6 +45,9 @@ export default function SegmentedControl({
                 isSelected ? styles.segmentTextSelected : null
               ]}
               numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.75}
+              maxFontSizeMultiplier={1.2}
             >
               {option}
             </Text>
@@ -47,6 +67,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border
   },
+  gridContainer: {
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    padding: 4
+  },
   segment: {
     flex: 1,
     minHeight: 38,
@@ -54,6 +79,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: 6,
     paddingHorizontal: 8
+  },
+  gridSegment: {
+    flex: 0,
+    width: '49%',
+    marginVertical: 2,
+    minHeight: 36
   },
   segmentSelected: {
     backgroundColor: colors.navyPrimary,
@@ -66,7 +97,8 @@ const styles = StyleSheet.create({
   segmentText: {
     fontSize: 13,
     fontWeight: '600',
-    color: colors.textSecondary
+    color: colors.textSecondary,
+    textAlign: 'center'
   },
   segmentTextSelected: {
     color: colors.white,

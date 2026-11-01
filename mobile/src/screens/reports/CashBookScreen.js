@@ -70,11 +70,25 @@ export default function CashBookScreen({ navigation }) {
             <View style={styles.summaryRow}>
               <View style={styles.summaryCol}>
                 <Text style={styles.summaryLabel}>OPENING CASH</Text>
-                <Text style={styles.summaryVal}>{formatINR(data?.openingCash || 0)}</Text>
+                <Text
+                  style={styles.summaryVal}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.7}
+                  maxFontSizeMultiplier={1.3}
+                >
+                  {formatINR(data?.openingCash || 0)}
+                </Text>
               </View>
               <View style={styles.summaryCol}>
                 <Text style={styles.summaryLabel}>TOTAL RECEIPTS</Text>
-                <Text style={[styles.summaryVal, { color: colors.goldPrimary }]}>
+                <Text
+                  style={[styles.summaryVal, { color: colors.goldPrimary }]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.7}
+                  maxFontSizeMultiplier={1.3}
+                >
                   +{formatINR(data?.totalReceipts || 0).replace('₹ ', '')}
                 </Text>
               </View>
@@ -83,13 +97,25 @@ export default function CashBookScreen({ navigation }) {
             <View style={[styles.summaryRow, { marginTop: 10 }]}>
               <View style={styles.summaryCol}>
                 <Text style={styles.summaryLabel}>TOTAL PAYMENTS</Text>
-                <Text style={[styles.summaryVal, { color: colors.goldLight }]}>
+                <Text
+                  style={[styles.summaryVal, { color: colors.goldLight }]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.7}
+                  maxFontSizeMultiplier={1.3}
+                >
                   -{formatINR(data?.totalPayments || 0).replace('₹ ', '')}
                 </Text>
               </View>
               <View style={styles.summaryCol}>
                 <Text style={styles.summaryLabel}>CLOSING CASH</Text>
-                <Text style={[styles.summaryVal, { fontSize: 18, color: colors.white }]}>
+                <Text
+                  style={[styles.summaryVal, { fontSize: 18, color: colors.white }]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.7}
+                  maxFontSizeMultiplier={1.3}
+                >
                   {formatINR(data?.closingCash || 0)}
                 </Text>
               </View>

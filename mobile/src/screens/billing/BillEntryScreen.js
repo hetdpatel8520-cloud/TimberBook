@@ -25,9 +25,11 @@ import {
   calculateRoundOff,
   formatINR
 } from '../../utils/timberMath';
+import { useResponsive } from '../../utils/responsive';
 
 export default function BillEntryScreen({ route, navigation }) {
   const insets = useSafeAreaInsets();
+  const { isSmall } = useResponsive();
   const [billType, setBillType] = useState('Size'); // 'Size' | 'Drum' | 'Normal' | 'Core Wood'
   const [mode, setMode] = useState('Credit'); // 'Cash' | 'Credit'
   const [billNo, setBillNo] = useState('');
@@ -523,8 +525,8 @@ export default function BillEntryScreen({ route, navigation }) {
             />
           </View>
 
-          <View style={styles.row}>
-            <View style={{ flex: 1, marginRight: 8 }}>
+          <View style={[styles.row, isSmall && { flexDirection: 'column' }]}>
+            <View style={{ flex: isSmall ? undefined : 1, marginRight: isSmall ? 0 : 8, marginBottom: isSmall ? 8 : 0 }}>
               <Text style={styles.fieldLabel}>MODE</Text>
               <SegmentedControl
                 options={['Credit', 'Cash']}
@@ -532,7 +534,7 @@ export default function BillEntryScreen({ route, navigation }) {
                 onChange={(idx) => setMode(idx === 0 ? 'Credit' : 'Cash')}
               />
             </View>
-            <View style={{ flex: 1, marginLeft: 8 }}>
+            <View style={{ flex: isSmall ? undefined : 1, marginLeft: isSmall ? 0 : 8 }}>
               <CustomInput
                 label="CHALLAN NO"
                 placeholder="e.g. CH-101"
@@ -567,20 +569,20 @@ export default function BillEntryScreen({ route, navigation }) {
             <Ionicons name="chevron-forward" size={20} color={colors.goldPrimary} />
           </TouchableOpacity>
 
-          <View style={styles.row}>
+          <View style={[styles.row, isSmall && { flexDirection: 'column' }]}>
             <CustomInput
               label="ORDER NO"
               placeholder="e.g. PO-892"
               value={orderNo}
               onChangeText={setOrderNo}
-              containerStyle={{ flex: 1, marginRight: 8 }}
+              containerStyle={{ flex: isSmall ? undefined : 1, marginRight: isSmall ? 0 : 8, marginBottom: isSmall ? 8 : 0 }}
             />
             <CustomInput
               label="DELIVERY AT"
               placeholder="Site / City"
               value={deliveryAt}
               onChangeText={setDeliveryAt}
-              containerStyle={{ flex: 1 }}
+              containerStyle={{ flex: isSmall ? undefined : 1 }}
             />
           </View>
         </View>
@@ -630,44 +632,89 @@ export default function BillEntryScreen({ route, navigation }) {
             {/* If Size Mode: Dimensions inputs */}
             {billType === 'Size' ? (
               <View>
-                <View style={styles.dimensionRow}>
-                  <CustomInput
-                    label="Pcs"
-                    placeholder="10"
-                    value={row.pieces}
-                    onChangeText={(v) => updateRowField(index, 'pieces', v)}
-                    error={rowErrors[index]?.pieces}
-                    keyboardType="numeric"
-                    containerStyle={styles.dimCol}
-                  />
-                  <CustomInput
-                    label='Thick (")'
-                    placeholder="3"
-                    value={row.thickness}
-                    onChangeText={(v) => updateRowField(index, 'thickness', v)}
-                    error={rowErrors[index]?.thickness}
-                    keyboardType="numeric"
-                    containerStyle={styles.dimCol}
-                  />
-                  <CustomInput
-                    label='Width (")'
-                    placeholder="2"
-                    value={row.width}
-                    onChangeText={(v) => updateRowField(index, 'width', v)}
-                    error={rowErrors[index]?.width}
-                    keyboardType="numeric"
-                    containerStyle={styles.dimCol}
-                  />
-                  <CustomInput
-                    label="Len (')"
-                    placeholder="7"
-                    value={row.length}
-                    onChangeText={(v) => updateRowField(index, 'length', v)}
-                    error={rowErrors[index]?.length}
-                    keyboardType="numeric"
-                    containerStyle={styles.dimCol}
-                  />
-                </View>
+                {isSmall ? (
+                  <View>
+                    <View style={styles.dimensionRow}>
+                      <CustomInput
+                        label="Pcs"
+                        placeholder="10"
+                        value={row.pieces}
+                        onChangeText={(v) => updateRowField(index, 'pieces', v)}
+                        error={rowErrors[index]?.pieces}
+                        keyboardType="numeric"
+                        containerStyle={styles.dimCol}
+                      />
+                      <CustomInput
+                        label='Thick (")'
+                        placeholder="3"
+                        value={row.thickness}
+                        onChangeText={(v) => updateRowField(index, 'thickness', v)}
+                        error={rowErrors[index]?.thickness}
+                        keyboardType="numeric"
+                        containerStyle={styles.dimCol}
+                      />
+                    </View>
+                    <View style={[styles.dimensionRow, { marginTop: 6 }]}>
+                      <CustomInput
+                        label='Width (")'
+                        placeholder="2"
+                        value={row.width}
+                        onChangeText={(v) => updateRowField(index, 'width', v)}
+                        error={rowErrors[index]?.width}
+                        keyboardType="numeric"
+                        containerStyle={styles.dimCol}
+                      />
+                      <CustomInput
+                        label="Len (')"
+                        placeholder="7"
+                        value={row.length}
+                        onChangeText={(v) => updateRowField(index, 'length', v)}
+                        error={rowErrors[index]?.length}
+                        keyboardType="numeric"
+                        containerStyle={styles.dimCol}
+                      />
+                    </View>
+                  </View>
+                ) : (
+                  <View style={styles.dimensionRow}>
+                    <CustomInput
+                      label="Pcs"
+                      placeholder="10"
+                      value={row.pieces}
+                      onChangeText={(v) => updateRowField(index, 'pieces', v)}
+                      error={rowErrors[index]?.pieces}
+                      keyboardType="numeric"
+                      containerStyle={styles.dimCol}
+                    />
+                    <CustomInput
+                      label='Thick (")'
+                      placeholder="3"
+                      value={row.thickness}
+                      onChangeText={(v) => updateRowField(index, 'thickness', v)}
+                      error={rowErrors[index]?.thickness}
+                      keyboardType="numeric"
+                      containerStyle={styles.dimCol}
+                    />
+                    <CustomInput
+                      label='Width (")'
+                      placeholder="2"
+                      value={row.width}
+                      onChangeText={(v) => updateRowField(index, 'width', v)}
+                      error={rowErrors[index]?.width}
+                      keyboardType="numeric"
+                      containerStyle={styles.dimCol}
+                    />
+                    <CustomInput
+                      label="Len (')"
+                      placeholder="7"
+                      value={row.length}
+                      onChangeText={(v) => updateRowField(index, 'length', v)}
+                      error={rowErrors[index]?.length}
+                      keyboardType="numeric"
+                      containerStyle={styles.dimCol}
+                    />
+                  </View>
+                )}
 
                 {/* Calculated Volumes */}
                 <View style={styles.volBanner}>
@@ -882,7 +929,15 @@ export default function BillEntryScreen({ route, navigation }) {
 
           <View style={styles.grandTotalBar}>
             <Text style={styles.grandTotalLabel}>GRAND TOTAL</Text>
-            <Text style={styles.grandTotalValue}>{formatINR(grandTotal)}</Text>
+            <Text
+              style={styles.grandTotalValue}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.7}
+              maxFontSizeMultiplier={1.3}
+            >
+              {formatINR(grandTotal)}
+            </Text>
           </View>
         </View>
 
