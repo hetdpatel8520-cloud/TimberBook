@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 const { registerModel } = require('../config/modelHelper');
 
 const SettingsSchema = new mongoose.Schema({
-  companyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', required: true },
+  companyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', required: true, unique: true, index: true },
   invoicePrefix: { type: String, default: '' },
   purchasePrefix: { type: String, default: 'PUR/' },
   receiptPrefix: { type: String, default: 'REC/' },

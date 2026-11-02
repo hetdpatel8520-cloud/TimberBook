@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 const { registerModel } = require('../config/modelHelper');
 
 const ItemSchema = new mongoose.Schema({
-  companyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', required: true },
+  companyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', required: true, index: true },
   name: { type: String, required: true, trim: true },
   hsn: { type: String, default: '4407', trim: true },
   group: {
@@ -23,7 +23,11 @@ const ItemSchema = new mongoose.Schema({
   openingQty: { type: Number, default: 0 },
   currentStock: { type: Number, default: 0 },
   reorderLevel: { type: Number, default: 50 },
-  isActive: { type: Boolean, default: true }
+  isActive: { type: Boolean, default: true, index: true }
 }, { timestamps: true });
+
+ItemSchema.index({ companyId: 1, name: 1 });
+ItemSchema.index({ companyId: 1, group: 1 });
+ItemSchema.index({ companyId: 1, isActive: 1 });
 
 module.exports = registerModel('Item', ItemSchema);

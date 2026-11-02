@@ -19,9 +19,12 @@ const CompanySchema = new mongoose.Schema({
   pincode: { type: String, required: true },
   phone: { type: String, required: true },
   email: { type: String, lowercase: true, trim: true, default: '' },
+  companyEmail: { type: String, lowercase: true, trim: true, default: '' },
   gstin: { type: String, uppercase: true, trim: true, default: '' },
   pan: { type: String, uppercase: true, trim: true, default: '' },
-  ownerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Owner' },
+  ownerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Owner', required: true, index: true },
+  isArchived: { type: Boolean, default: false, index: true },
+  isDefault: { type: Boolean, default: false },
   bankDetails: {
     bankName: { type: String, default: '' },
     accountName: { type: String, default: '' },
@@ -41,5 +44,27 @@ const CompanySchema = new mongoose.Schema({
   },
   defaultCftFactor: { type: Number, default: 35.3147 }
 }, { timestamps: true });
+
+// Pre-validate hook
+CompanySchema.pre('validate', function (next) {
+  if (this.email && !this.companyEmail) {
+    this.companyEmail = this.email;
+  } else if (this.companyEmail && !this.email) {
+    this.email = this.companyEmail;
+  }
+  next();
+});
+
+// Compound indexes
+CompanySchema.index({ ownerId: 1, isArchived: 1 });
+CompanySchema.index({ ownerId: 1, name: 1 });
+CompanySchema.index(
+  { gstin: 1 },
+  {
+    unique: true,
+    sparse: true,
+    partialFilterExpression: { gstin: { $type: 'string', $gt: '' } }
+  }
+);
 
 module.exports = registerModel('Company', CompanySchema);

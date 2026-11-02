@@ -28,7 +28,7 @@ const InvoiceItemSchema = new mongoose.Schema({
 });
 
 const InvoiceSchema = new mongoose.Schema({
-  companyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', required: true },
+  companyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', required: true, index: true },
   billType: {
     type: String,
     enum: ['Size', 'Drum', 'Normal', 'Core Wood'],
@@ -38,7 +38,7 @@ const InvoiceSchema = new mongoose.Schema({
   billNo: { type: String, required: true },
   challanNo: { type: String, default: '' },
   mode: { type: String, enum: ['Cash', 'Credit'], default: 'Credit', required: true },
-  partyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Ledger', required: true },
+  partyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Ledger', required: true, index: true },
   partySnapshot: {
     name: String,
     city: String,
@@ -48,7 +48,7 @@ const InvoiceSchema = new mongoose.Schema({
     address: String,
     phone: String
   },
-  date: { type: Date, default: Date.now },
+  date: { type: Date, default: Date.now, index: true },
   orderNo: { type: String, default: '' },
   deliveryAt: { type: String, default: '' },
   items: [InvoiceItemSchema],
@@ -74,5 +74,10 @@ const InvoiceSchema = new mongoose.Schema({
   isCancelled: { type: Boolean, default: false },
   financialYearId: { type: mongoose.Schema.Types.ObjectId, ref: 'FinancialYear' }
 }, { timestamps: true });
+
+InvoiceSchema.index({ companyId: 1, billNo: 1 });
+InvoiceSchema.index({ companyId: 1, date: -1 });
+InvoiceSchema.index({ companyId: 1, partyId: 1 });
+InvoiceSchema.index({ companyId: 1, isCancelled: 1 });
 
 module.exports = registerModel('Invoice', InvoiceSchema);

@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 const { registerModel } = require('../config/modelHelper');
 
 const LedgerSchema = new mongoose.Schema({
-  companyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', required: true },
+  companyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', required: true, index: true },
   name: { type: String, required: true, trim: true },
   group: { type: String, required: true, default: 'Sundry Debtors' },
   taxType: { type: String, enum: ['Local', 'Interstate'], default: 'Local' },
@@ -22,7 +22,11 @@ const LedgerSchema = new mongoose.Schema({
   currentBalanceType: { type: String, enum: ['Dr', 'Cr'], default: 'Dr' },
   creditDays: { type: Number, default: 30 },
   creditLimit: { type: Number, default: 0 },
-  isActive: { type: Boolean, default: true }
+  isActive: { type: Boolean, default: true, index: true }
 }, { timestamps: true });
+
+LedgerSchema.index({ companyId: 1, name: 1 });
+LedgerSchema.index({ companyId: 1, group: 1 });
+LedgerSchema.index({ companyId: 1, isActive: 1 });
 
 module.exports = registerModel('Ledger', LedgerSchema);

@@ -18,9 +18,9 @@ const PurchaseItemSchema = new mongoose.Schema({
 });
 
 const PurchaseSchema = new mongoose.Schema({
-  companyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', required: true },
+  companyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', required: true, index: true },
   mode: { type: String, enum: ['Cash', 'Credit'], default: 'Credit', required: true },
-  partyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Ledger', required: true },
+  partyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Ledger', required: true, index: true },
   partySnapshot: {
     name: String,
     city: String,
@@ -32,7 +32,7 @@ const PurchaseSchema = new mongoose.Schema({
   },
   purchaseNo: { type: String, required: true },
   supplierBillNo: { type: String, default: '' },
-  date: { type: Date, default: Date.now },
+  date: { type: Date, default: Date.now, index: true },
   items: [PurchaseItemSchema],
   subtotal: { type: Number, required: true, default: 0 },
   cgstTotal: { type: Number, default: 0 },
@@ -44,5 +44,9 @@ const PurchaseSchema = new mongoose.Schema({
   vehicleNo: { type: String, default: '' },
   financialYearId: { type: mongoose.Schema.Types.ObjectId, ref: 'FinancialYear' }
 }, { timestamps: true });
+
+PurchaseSchema.index({ companyId: 1, purchaseNo: 1 });
+PurchaseSchema.index({ companyId: 1, date: -1 });
+PurchaseSchema.index({ companyId: 1, partyId: 1 });
 
 module.exports = registerModel('Purchase', PurchaseSchema);

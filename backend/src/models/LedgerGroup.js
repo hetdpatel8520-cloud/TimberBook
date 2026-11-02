@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 const { registerModel } = require('../config/modelHelper');
 
 const LedgerGroupSchema = new mongoose.Schema({
-  companyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', default: null },
+  companyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', default: null, index: true },
   name: { type: String, required: true, trim: true },
   nature: {
     type: String,
@@ -12,5 +12,7 @@ const LedgerGroupSchema = new mongoose.Schema({
   parentGroup: { type: String, default: null },
   isSystem: { type: Boolean, default: false }
 }, { timestamps: true });
+
+LedgerGroupSchema.index({ companyId: 1, name: 1 });
 
 module.exports = registerModel('LedgerGroup', LedgerGroupSchema);
