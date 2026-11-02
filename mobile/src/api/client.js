@@ -25,6 +25,7 @@ const getInitialBaseUrl = () => {
 const DEFAULT_URL = getInitialBaseUrl();
 
 let authToken = null;
+let activeCompanyId = null;
 let currentBaseUrl = DEFAULT_URL;
 
 export const setAuthToken = (token) => {
@@ -32,6 +33,12 @@ export const setAuthToken = (token) => {
 };
 
 export const getAuthToken = () => authToken;
+
+export const setActiveCompanyId = (companyId) => {
+  activeCompanyId = companyId;
+};
+
+export const getActiveCompanyId = () => activeCompanyId;
 
 export const setBaseUrl = (url) => {
   currentBaseUrl = url;
@@ -76,6 +83,9 @@ apiClient.interceptors.request.use((config) => {
   if (authToken) {
     config.headers.Authorization = `Bearer ${authToken}`;
   }
+  if (activeCompanyId) {
+    config.headers['X-Company-Id'] = activeCompanyId;
+  }
   return config;
 });
 
@@ -117,10 +127,15 @@ export const authApi = {
   updateSecurity: (payload) => apiClient.post('/auth/security', payload)
 };
 
-// 4. Company API
+// 4. Multi-Company & Tenant Management API
 export const companyApi = {
   get: () => apiClient.get('/company'),
-  update: (data) => apiClient.put('/company', data)
+  update: (data) => apiClient.put('/company', data),
+  getMyCompanies: () => apiClient.get('/companies'),
+  createCompany: (data) => apiClient.post('/companies', data),
+  updateCompany: (id, data) => apiClient.patch(`/companies/${id}`, data),
+  switchCompany: (id) => apiClient.post(`/companies/${id}/switch`),
+  archiveCompany: (id) => apiClient.post(`/companies/${id}/archive`)
 };
 
 // 5. Ledgers API

@@ -131,6 +131,27 @@ export default function SettingsScreen({ navigation }) {
           </View>
         </View>
 
+        {/* MY COMPANIES / MULTI-BUSINESS */}
+        <Text style={styles.sectionTitle}>MY COMPANIES / BUSINESSES</Text>
+        <View style={styles.menuCard}>
+          <TouchableOpacity
+            style={styles.menuItem}
+            activeOpacity={0.7}
+            onPress={() => navigation.navigate('MyCompanies')}
+          >
+            <View style={styles.menuIconBox}>
+              <Ionicons name="business-outline" size={20} color={colors.navyPrimary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.menuTitle}>Manage Companies</Text>
+              <Text style={styles.menuSub}>
+                Active: <Text style={{ color: colors.goldPrimary, fontWeight: '700' }}>{company?.name || 'Company Profile'}</Text> • Tap to switch or add
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.borderDark} />
+          </TouchableOpacity>
+        </View>
+
         {/* FINANCIAL YEAR MANAGEMENT */}
         <Text style={styles.sectionTitle}>{t('financialYears').toUpperCase()}</Text>
         <View style={styles.menuCard}>

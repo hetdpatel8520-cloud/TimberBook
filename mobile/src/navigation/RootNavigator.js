@@ -38,6 +38,7 @@ import ItemFormScreen from '../screens/masters/ItemFormScreen';
 // Settings Screens
 import SettingsScreen from '../screens/settings/SettingsScreen';
 import BackupRestoreScreen from '../screens/settings/BackupRestoreScreen';
+import MyCompaniesScreen from '../screens/settings/MyCompaniesScreen';
 import FinancialYearScreen from '../screens/setup/FinancialYearScreen';
 
 const Stack = createNativeStackNavigator();
@@ -87,6 +88,7 @@ export default function RootNavigator() {
             <Stack.Screen name="ItemForm" component={ItemFormScreen} />
 
             <Stack.Screen name="SettingsTab" component={SettingsScreen} />
+            <Stack.Screen name="MyCompanies" component={MyCompaniesScreen} />
             <Stack.Screen name="BackupRestore" component={BackupRestoreScreen} />
           </>
         )}

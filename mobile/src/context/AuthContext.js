@@ -1,11 +1,12 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { authApi, companyApi, setAuthToken } from '../api/client';
+import { authApi, companyApi, setAuthToken, setActiveCompanyId } from '../api/client';
 
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [owner, setOwner] = useState(null);
   const [company, setCompany] = useState(null);
+  const [companies, setCompanies] = useState([]);
   const [financialYear, setFinancialYear] = useState(null);
   const [token, setToken] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -19,6 +20,8 @@ export const AuthProvider = ({ children }) => {
       setToken(res.token);
       setOwner(res.owner);
       setCompany(res.company);
+      setCompanies(res.companies || (res.company ? [res.company] : []));
+      setActiveCompanyId(res.company?._id || res.owner?.activeCompanyId);
       setFinancialYear(res.financialYear);
       setIsLocked(false);
       return res;
@@ -34,6 +37,8 @@ export const AuthProvider = ({ children }) => {
       setToken(res.token);
       setOwner(res.owner);
       setCompany(res.company);
+      setCompanies(res.companies || (res.company ? [res.company] : []));
+      setActiveCompanyId(res.company?._id || res.owner?.activeCompanyId);
       setFinancialYear(res.financialYear);
       setIsLocked(false);
       return res;
@@ -49,6 +54,8 @@ export const AuthProvider = ({ children }) => {
       setToken(res.token);
       setOwner(res.owner);
       setCompany(res.company);
+      setCompanies(res.companies || (res.company ? [res.company] : []));
+      setActiveCompanyId(res.company?._id);
       setFinancialYear(res.financialYear);
       setIsLocked(false);
       return res;
@@ -88,11 +95,79 @@ export const AuthProvider = ({ children }) => {
       setToken(res.token);
       setOwner(res.owner);
       setCompany(res.company);
+      setCompanies(res.companies || (res.company ? [res.company] : []));
+      setActiveCompanyId(res.company?._id);
       setFinancialYear(res.financialYear);
       setIsLocked(false);
       return true;
     }
     return false;
+  };
+
+  // Switch Active Company
+  const switchCompany = async (targetCompanyId) => {
+    try {
+      setIsLoading(true);
+      const res = await companyApi.switchCompany(targetCompanyId);
+      if (res.success) {
+        if (res.token) {
+          setAuthToken(res.token);
+          setToken(res.token);
+        }
+        setCompany(res.company);
+        setActiveCompanyId(res.company._id);
+        if (res.currentFY) {
+          setFinancialYear(res.currentFY);
+        }
+        await refreshCompanies();
+        return res;
+      }
+      throw new Error(res.message || 'Could not switch company.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Create an additional company under current owner
+  const createNewCompany = async (companyData) => {
+    try {
+      setIsLoading(true);
+      const res = await companyApi.createCompany(companyData);
+      if (res.success) {
+        if (res.token) {
+          setAuthToken(res.token);
+          setToken(res.token);
+        }
+        setCompany(res.company);
+        setActiveCompanyId(res.company._id);
+        if (res.financialYear) {
+          setFinancialYear(res.financialYear);
+        }
+        await refreshCompanies();
+        return res;
+      }
+      throw new Error(res.message || 'Could not create company.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Fetch all companies belonging to owner
+  const refreshCompanies = async () => {
+    try {
+      const res = await companyApi.getMyCompanies();
+      if (res.success && Array.isArray(res.companies)) {
+        setCompanies(res.companies);
+        if (res.activeCompanyId) {
+          const matched = res.companies.find((c) => String(c._id) === String(res.activeCompanyId));
+          if (matched) setCompany(matched);
+        }
+        return res.companies;
+      }
+    } catch (err) {
+      console.warn('Failed to refresh companies list:', err.message);
+    }
+    return [];
   };
 
   const switchActiveFY = async (fy) => {
@@ -107,16 +182,21 @@ export const AuthProvider = ({ children }) => {
 
   const logout = () => {
     setAuthToken(null);
+    setActiveCompanyId(null);
     setToken(null);
     setOwner(null);
     setCompany(null);
+    setCompanies([]);
     setIsLocked(false);
   };
 
   const refreshCompany = async () => {
     try {
       const res = await companyApi.get();
-      if (res.company) setCompany(res.company);
+      if (res.company) {
+        setCompany(res.company);
+        setActiveCompanyId(res.company._id);
+      }
     } catch (err) {
       console.warn('Failed to refresh company info', err.message);
     }
@@ -127,6 +207,7 @@ export const AuthProvider = ({ children }) => {
       value={{
         owner,
         company,
+        companies,
         financialYear,
         token,
         isAuthenticated: !!token,
@@ -141,6 +222,9 @@ export const AuthProvider = ({ children }) => {
         forgotPassword,
         resetPassword,
         unlockWithPin,
+        switchCompany,
+        createNewCompany,
+        refreshCompanies,
         lockApp,
         logout,
         refreshCompany,
@@ -155,6 +239,8 @@ export const AuthProvider = ({ children }) => {
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) throw new Error('useAuth must be used within an AuthProvider');
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
   return context;
 };

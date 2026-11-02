@@ -14,6 +14,7 @@ import { useAuth } from '../../context/AuthContext';
 import { reportsApi, syncApi } from '../../api/client';
 import { useTranslation, AVAILABLE_LANGUAGES } from '../../i18n/LanguageContext';
 import ActionTile from '../../components/ActionTile';
+import CompanySwitcherModal from '../../components/CompanySwitcherModal';
 import { useResponsive } from '../../utils/responsive';
 
 export default function DashboardScreen({ navigation }) {
@@ -51,11 +52,12 @@ export default function DashboardScreen({ navigation }) {
     storageMode: 'MongoDB Atlas'
   });
   const [refreshing, setRefreshing] = useState(false);
+  const [showCompanyModal, setShowCompanyModal] = useState(false);
 
   useEffect(() => {
     fetchDashboard();
     checkSync();
-  }, []);
+  }, [company?._id]);
 
   const fetchDashboard = async () => {
     try {
@@ -441,6 +443,10 @@ const styles = StyleSheet.create({
   },
   headerLeft: {
     flex: 1
+  },
+  companyTitleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center'
   },
   companyTitle: {
     fontSize: 18,
