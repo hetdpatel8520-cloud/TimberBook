@@ -1,20 +1,24 @@
 import axios from 'axios';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export const CLOUD_247_URL = 'https://timberbooks-backend.onrender.com/api';
+export const CURRENT_APP_VERSION = '1.0.3';
+export const CLOUD_247_URL = process.env.EXPO_PUBLIC_API_URL || 'https://timberbooks-backend.onrender.com/api';
 export const PUBLIC_TUNNEL_URL = CLOUD_247_URL;
 export const LOCAL_WIFI_URL = 'http://10.241.74.108:5000/api';
 
 // Automatically detect host IP when running in Expo Go or Phone browser, or use 24/7 Cloud Host
 const getInitialBaseUrl = () => {
   if (Platform.OS === 'web') return '/api';
-  const debuggerHost = Constants.expoConfig?.hostUri || Constants.manifest?.debuggerHost || '';
-  const host = debuggerHost.split(':')[0];
-  if (host && host !== '127.0.0.1' && host !== 'localhost') {
-    return `http://${host}:5000/api`;
+  if (__DEV__) {
+    const debuggerHost = Constants.expoConfig?.hostUri || Constants.manifest?.debuggerHost || '';
+    const host = debuggerHost.split(':')[0];
+    if (host && host !== '127.0.0.1' && host !== 'localhost') {
+      return `http://${host}:5000/api`;
+    }
   }
-  // Standalone APK: default to permanent 24/7 Render Cloud URL
+  // Standalone Production APK: always default to permanent 24/7 Render Cloud URL
   return CLOUD_247_URL;
 };
 
@@ -35,6 +39,30 @@ export const setBaseUrl = (url) => {
 };
 
 export const getBaseUrl = () => currentBaseUrl;
+
+// Clear legacy server URL overrides if version changed
+export const initApiUrl = async () => {
+  try {
+    const lastVersion = await AsyncStorage.getItem('@timberbooks_app_version');
+    if (lastVersion !== CURRENT_APP_VERSION) {
+      await AsyncStorage.removeItem('@timberbooks_server_url');
+      await AsyncStorage.setItem('@timberbooks_app_version', CURRENT_APP_VERSION);
+      setBaseUrl(CLOUD_247_URL);
+      return CLOUD_247_URL;
+    }
+
+    if (__DEV__) {
+      const saved = await AsyncStorage.getItem('@timberbooks_server_url');
+      if (saved) {
+        setBaseUrl(saved);
+        return saved;
+      }
+    }
+  } catch (e) {
+    // ignore
+  }
+  return currentBaseUrl;
+};
 
 const apiClient = axios.create({
   baseURL: currentBaseUrl,
@@ -59,14 +87,23 @@ apiClient.interceptors.response.use(
   }
 );
 
-// 1. Setup API
+// 1. Health & Server Info API
+export const healthApi = {
+  check: async () => {
+    const rootUrl = currentBaseUrl.replace(/\/api\/?$/, '');
+    const res = await axios.get(`${rootUrl}/health`, { timeout: 8000 });
+    return res.data;
+  }
+};
+
+// 2. Setup API
 export const setupApi = {
   getStatus: () => apiClient.get('/setup/status'),
   initialize: (payload) => apiClient.post('/setup/initialize', payload),
   seedDemo: () => apiClient.post('/setup/seed-demo')
 };
 
-// 2. Auth & Registration API
+// 3. Auth & Registration API
 export const authApi = {
   login: (credentials) => apiClient.post('/auth/login', credentials),
   verifyPin: (payload) => apiClient.post('/auth/verify-pin', typeof payload === 'object' ? payload : { pin: payload }),
@@ -80,13 +117,13 @@ export const authApi = {
   updateSecurity: (payload) => apiClient.post('/auth/security', payload)
 };
 
-// 3. Company API
+// 4. Company API
 export const companyApi = {
   get: () => apiClient.get('/company'),
   update: (data) => apiClient.put('/company', data)
 };
 
-// 4. Ledgers API
+// 5. Ledgers API
 export const ledgersApi = {
   list: (params) => apiClient.get('/ledgers', { params }),
   getById: (id) => apiClient.get(`/ledgers/${id}`),
@@ -96,7 +133,7 @@ export const ledgersApi = {
   getGroups: () => apiClient.get('/ledgers/groups')
 };
 
-// 5. Items API
+// 6. Items API
 export const itemsApi = {
   list: (params) => apiClient.get('/items', { params }),
   getById: (id) => apiClient.get(`/items/${id}`),
@@ -105,7 +142,7 @@ export const itemsApi = {
   delete: (id) => apiClient.delete(`/items/${id}`)
 };
 
-// 6. Invoices API
+// 7. Invoices API
 export const invoicesApi = {
   getNextNumber: () => apiClient.get('/invoices/next-number'),
   list: (params) => apiClient.get('/invoices', { params }),
@@ -115,14 +152,14 @@ export const invoicesApi = {
   getPdfUrl: (id) => `${currentBaseUrl}/invoices/${id}/pdf`
 };
 
-// 7. Purchases API
+// 8. Purchases API
 export const purchasesApi = {
   list: (params) => apiClient.get('/purchases', { params }),
   getById: (id) => apiClient.get(`/purchases/${id}`),
   create: (data) => apiClient.post('/purchases', data)
 };
 
-// 8. Vouchers API
+// 9. Vouchers API
 export const vouchersApi = {
   getNextNumber: (type) => apiClient.get(`/vouchers/next-number/${type}`),
   list: (params) => apiClient.get('/vouchers', { params }),
@@ -130,7 +167,7 @@ export const vouchersApi = {
   delete: (id) => apiClient.delete(`/vouchers/${id}`)
 };
 
-// 9. Reports API
+// 10. Reports API
 export const reportsApi = {
   getDashboard: () => apiClient.get('/reports/dashboard'),
   getLedgerStatement: (partyId, params) => apiClient.get(`/reports/ledger-statement/${partyId}`, { params }),
@@ -140,7 +177,7 @@ export const reportsApi = {
   getPurchaseRegister: (params) => apiClient.get('/reports/purchase-register', { params })
 };
 
-// 10. Settings & Backup API
+// 11. Settings & Backup API
 export const settingsApi = {
   get: () => apiClient.get('/settings'),
   update: (data) => apiClient.put('/settings', data),
@@ -148,22 +185,21 @@ export const settingsApi = {
   restoreBackup: (data) => apiClient.post('/settings/restore', { data })
 };
 
-// 11. Financial Years API
+// 12. Financial Years API
 export const financialYearsApi = {
   list: () => apiClient.get('/financial-years'),
   switch: (id) => apiClient.post('/financial-years/switch', { id }),
   create: (data) => apiClient.post('/financial-years', data)
 };
 
-// 12. Cloud Sync API
+// 13. Cloud Sync API
 export const syncApi = {
   getStatus: () => apiClient.get('/sync/status')
 };
 
-// 13. App Version & Updates API
+// 14. App Version & Updates API
 export const appVersionApi = {
   checkVersion: (params) => apiClient.get('/app-version', { params })
 };
 
 export default apiClient;
-

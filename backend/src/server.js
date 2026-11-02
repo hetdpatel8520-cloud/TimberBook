@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
+const mongoose = require('mongoose');
 const { connectDB } = require('./config/db');
 const apiRoutes = require('./routes/api');
 const errorHandler = require('./middleware/errorHandler');
@@ -17,11 +18,15 @@ if (process.env.NODE_ENV !== 'test') {
   app.use(morgan('dev'));
 }
 
-// Health check
+// Health check endpoint
 app.get('/health', (req, res) => {
+  const isConnected = mongoose.connection.readyState === 1;
+  const dbName = mongoose.connection.name || process.env.MONGO_DB_NAME || 'timberbooks';
   res.json({
     status: 'ok',
-    app: 'TimberBooks Backend',
+    db: isConnected ? 'connected' : 'disconnected',
+    dbName: dbName,
+    version: '1.0.3',
     timestamp: new Date().toISOString()
   });
 });

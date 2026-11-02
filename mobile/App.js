@@ -8,12 +8,16 @@ import { LanguageProvider } from './src/i18n/LanguageContext';
 import { AuthProvider } from './src/context/AuthContext';
 import RootNavigator from './src/navigation/RootNavigator';
 import { checkAllUpdates } from './src/services/updateService';
+import { initApiUrl } from './src/api/client';
 import { colors } from './src/theme/colors';
 
 const queryClient = new QueryClient();
 
 export default function App() {
   useEffect(() => {
+    // Initialize & verify cloud backend API URL
+    initApiUrl();
+
     // Check for updates on startup
     checkAllUpdates({ showNoUpdateAlert: false });
 

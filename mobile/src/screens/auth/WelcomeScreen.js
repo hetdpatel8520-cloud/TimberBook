@@ -23,16 +23,18 @@ export default function WelcomeScreen({ navigation }) {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={colors.navyDark} />
 
-      {/* Top Utility Bar with Server Settings & Language Selector */}
+      {/* Top Utility Bar with Server Settings (Dev only) & Language Selector */}
       <View style={[styles.topUtilityBar, { paddingTop: Math.max(insets.top, 12) + 6 }]}>
-        <TouchableOpacity
-          style={styles.serverPill}
-          onPress={() => setShowServerModal(true)}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="wifi-outline" size={13} color={colors.goldPrimary} style={{ marginRight: 4 }} />
-          <Text style={styles.serverPillText}>Server</Text>
-        </TouchableOpacity>
+        {__DEV__ ? (
+          <TouchableOpacity
+            style={styles.serverPill}
+            onPress={() => setShowServerModal(true)}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="wifi-outline" size={13} color={colors.goldPrimary} style={{ marginRight: 4 }} />
+            <Text style={styles.serverPillText}>Server</Text>
+          </TouchableOpacity>
+        ) : <View style={{ width: 1 }} />}
 
         <View style={styles.languagePillContainer}>
           {AVAILABLE_LANGUAGES.map((lang) => (

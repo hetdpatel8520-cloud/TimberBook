@@ -1,14 +1,66 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const mongoose = require('mongoose');
 const Owner = require('../models/Owner');
 const Company = require('../models/Company');
 const FinancialYear = require('../models/FinancialYear');
 const Ledger = require('../models/Ledger');
 const LedgerGroup = require('../models/LedgerGroup');
 const Settings = require('../models/Settings');
+const { normalizeEmail, normalizeMobile, maskIdentifier } = require('../utils/normalize');
 
-// In-memory OTP storage for registration verification
+// In-memory OTP storage for registration verification (fallback / demo)
 const otpStore = new Map();
+
+/**
+ * Helper: Searches legacy collections (users, companys) if not found in Owner
+ */
+async function findLegacyAccount(loginId, normMobile, normEmail) {
+  const db = mongoose.connection.db;
+  if (!db) return null;
+
+  // 1. Check legacy 'users' collection
+  try {
+    const usersCol = db.collection('users');
+    const user = await usersCol.findOne({
+      $or: [
+        { email: normEmail },
+        { email: loginId.toLowerCase() },
+        { username: loginId },
+        { username: normMobile },
+        { mobile: normMobile },
+        { phone: normMobile }
+      ]
+    });
+    if (user && user.passwordHash) {
+      return { source: 'users', doc: user };
+    }
+  } catch (e) {
+    // collection may not exist
+  }
+
+  // 2. Check legacy 'companies' or 'companys' collection
+  try {
+    for (const colName of ['companies', 'companys']) {
+      const compCol = db.collection(colName);
+      const comp = await compCol.findOne({
+        $or: [
+          { email: normEmail },
+          { email: loginId.toLowerCase() },
+          { phone: normMobile },
+          { phone: loginId }
+        ]
+      });
+      if (comp && comp.passwordHash) {
+        return { source: colName, doc: comp };
+      }
+    }
+  } catch (e) {
+    // collection may not exist
+  }
+
+  return null;
+}
 
 /**
  * Check if Mobile, Email, or GSTIN is already registered
@@ -19,7 +71,13 @@ async function checkDuplicate(req, res, next) {
 
     if (mobile) {
       const cleanMobile = mobile.trim();
-      const existing = await Owner.findOne({ mobile: cleanMobile });
+      const normMobile = normalizeMobile(cleanMobile);
+      const existing = await Owner.findOne({
+        $or: [
+          { mobileNormalized: normMobile },
+          { mobile: cleanMobile }
+        ]
+      });
       if (existing) {
         return res.json({
           success: false,
@@ -32,7 +90,13 @@ async function checkDuplicate(req, res, next) {
 
     if (email) {
       const cleanEmail = email.trim().toLowerCase();
-      const existing = await Owner.findOne({ email: cleanEmail });
+      const normEmail = normalizeEmail(cleanEmail);
+      const existing = await Owner.findOne({
+        $or: [
+          { emailLower: normEmail },
+          { email: cleanEmail }
+        ]
+      });
       if (existing) {
         return res.json({
           success: false,
@@ -72,21 +136,28 @@ async function sendOtp(req, res, next) {
       return res.status(400).json({ success: false, message: 'Mobile number or email is required.' });
     }
 
-    const key = (mobile || email).trim().toLowerCase();
-    // Generate 6 digit OTP
+    const rawTarget = (mobile || email).trim();
+    const key = rawTarget.includes('@') ? normalizeEmail(rawTarget) : normalizeMobile(rawTarget);
+
+    // Generate 6-digit OTP
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
 
     otpStore.set(key, { code, expiresAt });
 
-    console.log(`📱 [TimberBooks OTP] Verification Code for ${key}: ${code}`);
+    console.log(`📱 [TimberBooks OTP] Code generated for ${maskIdentifier(rawTarget)}`);
 
-    return res.json({
+    const responseData = {
       success: true,
-      message: `Verification code sent to ${mobile || email}`,
-      // Return code in dev/demo for effortless testing
-      devOtp: code
-    });
+      message: `Verification code sent to ${maskIdentifier(rawTarget)}`
+    };
+
+    // In local development only, permit devOtp for automated test convenience
+    if (process.env.NODE_ENV === 'development' && process.env.DEV_SHOW_OTP === 'true') {
+      responseData.devOtp = code;
+    }
+
+    return res.json(responseData);
   } catch (err) {
     next(err);
   }
@@ -98,11 +169,12 @@ async function sendOtp(req, res, next) {
 async function verifyOtp(req, res, next) {
   try {
     const { mobile, email, otp, code } = req.body;
-    const key = (mobile || email || '').trim().toLowerCase();
+    const rawTarget = (mobile || email || '').trim();
+    const key = rawTarget.includes('@') ? normalizeEmail(rawTarget) : normalizeMobile(rawTarget);
     const enteredOtp = (otp || code || '').trim();
 
-    // Standard dev fallback: 123456 is always accepted
-    if (enteredOtp === '123456') {
+    // Standard dev fallback: 123456 accepted in development only
+    if (process.env.NODE_ENV === 'development' && enteredOtp === '123456') {
       return res.json({ success: true, verified: true });
     }
 
@@ -182,12 +254,14 @@ async function registerCompany(req, res, next) {
 
     const cleanMobile = mobile.trim();
     const cleanEmail = email.trim().toLowerCase();
+    const normMobile = normalizeMobile(cleanMobile);
+    const normEmail = normalizeEmail(cleanEmail);
     const cleanGstin = gstin.trim().toUpperCase();
 
     // 2. Duplicate Checks
     const [existingMobile, existingEmail] = await Promise.all([
-      Owner.findOne({ mobile: cleanMobile }),
-      Owner.findOne({ email: cleanEmail })
+      Owner.findOne({ $or: [{ mobileNormalized: normMobile }, { mobile: cleanMobile }] }),
+      Owner.findOne({ $or: [{ emailLower: normEmail }, { email: cleanEmail }] })
     ]);
 
     if (existingMobile) {
@@ -255,8 +329,10 @@ async function registerCompany(req, res, next) {
     const owner = await Owner.create({
       fullName: fullName.trim(),
       mobile: cleanMobile,
+      mobileNormalized: normMobile,
       email: cleanEmail,
-      username: cleanMobile,
+      emailLower: normEmail,
+      username: normMobile || cleanMobile,
       passwordHash,
       pinHash,
       companyId: company._id,
@@ -268,7 +344,7 @@ async function registerCompany(req, res, next) {
     company.ownerId = owner._id;
     await company.save();
 
-    // 6. Create Initial Financial Year (Default: current Indian FY)
+    // 6. Create Initial Financial Year
     const now = new Date();
     const startYear = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
     const defaultFrom = new Date(startYear, 3, 1);
@@ -350,14 +426,6 @@ async function registerCompany(req, res, next) {
     }
 
     // 9. Initial Settings
-    const prefix = companyName
-      .trim()
-      .split(' ')
-      .map(w => w[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 4) || 'INV';
-
     const settings = await Settings.create({
       companyId: company._id,
       invoicePrefix: '',
@@ -365,10 +433,11 @@ async function registerCompany(req, res, next) {
       biometricRequired: !!pinHash
     });
 
-    // 10. Issue Multi-tenant JWT
+    // 10. Issue JWT
     const token = jwt.sign(
       {
         id: owner._id,
+        ownerId: owner._id,
         companyId: company._id,
         mobile: owner.mobile,
         email: owner.email,
@@ -400,7 +469,8 @@ async function registerCompany(req, res, next) {
 }
 
 /**
- * Universal Login: Supports Mobile, Email, or Username + Password
+ * Universal Login: Accepts Mobile, Email, or Username + Password
+ * Normalizes inputs (+91, spaces, 0 prefix, uppercase) and supports legacy migration
  */
 async function login(req, res, next) {
   try {
@@ -414,29 +484,82 @@ async function login(req, res, next) {
       });
     }
 
-    const owner = await Owner.findOne({
+    const normMobile = normalizeMobile(loginId);
+    const normEmail = normalizeEmail(loginId);
+
+    // 1. Primary lookup in Owner collection
+    let owner = await Owner.findOne({
       $or: [
+        { mobileNormalized: normMobile },
+        { emailLower: normEmail },
         { mobile: loginId },
-        { email: loginId.toLowerCase() },
-        { username: loginId }
+        { email: normEmail },
+        { username: loginId },
+        { username: normMobile }
       ]
     });
 
+    // 2. Legacy fallback lookup if not found in Owner
     if (!owner) {
+      const legacy = await findLegacyAccount(loginId, normMobile, normEmail);
+      if (legacy && legacy.doc.passwordHash) {
+        const isLegacyMatch = await bcrypt.compare(password, legacy.doc.passwordHash);
+        if (isLegacyMatch) {
+          console.log(`[AUTH] Auto-migrating legacy account (${legacy.source}) for ${maskIdentifier(loginId)}`);
+          owner = await Owner.create({
+            fullName: legacy.doc.fullName || legacy.doc.name || legacy.doc.username || 'Owner',
+            mobile: legacy.doc.mobile || legacy.doc.phone || normMobile || '0000000000',
+            mobileNormalized: normMobile || normalizeMobile(legacy.doc.mobile || legacy.doc.phone || ''),
+            email: legacy.doc.email || normEmail || 'legacy@timberbooks.app',
+            emailLower: normEmail || normalizeEmail(legacy.doc.email || ''),
+            username: legacy.doc.username || normMobile || loginId,
+            passwordHash: legacy.doc.passwordHash,
+            pinHash: legacy.doc.pinHash || null,
+            companyId: legacy.doc.companyId || legacy.doc._id,
+            isVerified: true
+          });
+        }
+      }
+    }
+
+    if (!owner) {
+      console.warn(`[AUTH] Login failed for ${maskIdentifier(loginId)} - Reason: Account not found`);
       return res.status(401).json({
         success: false,
-        message: 'No account found matching this Mobile or Email. Please check or register.'
+        message: 'Invalid credentials. Please check the mobile number or email, or use Forgot Password. Not registered? Register your company.'
       });
     }
 
+    // Check account lockout
+    if (owner.lockUntil && owner.lockUntil > new Date()) {
+      const remainingMinutes = Math.ceil((owner.lockUntil - Date.now()) / (60 * 1000));
+      console.warn(`[AUTH] Login blocked for ${maskIdentifier(loginId)} - Reason: Account locked`);
+      return res.status(429).json({
+        success: false,
+        message: `Account is temporarily locked due to multiple failed attempts. Please try again in ${remainingMinutes} minute(s) or reset your password.`
+      });
+    }
+
+    // Verify Password
     const isMatch = await bcrypt.compare(password, owner.passwordHash);
     if (!isMatch) {
+      owner.failedLoginAttempts = (owner.failedLoginAttempts || 0) + 1;
+      if (owner.failedLoginAttempts >= 5) {
+        owner.lockUntil = new Date(Date.now() + 15 * 60 * 1000);
+        console.warn(`[AUTH] Account locked for ${maskIdentifier(loginId)} after 5 failed attempts`);
+      }
+      await owner.save();
+
+      console.warn(`[AUTH] Login failed for ${maskIdentifier(loginId)} - Reason: Incorrect password (attempt ${owner.failedLoginAttempts})`);
       return res.status(401).json({
         success: false,
-        message: 'Incorrect password. Please try again or tap Forgot Password.'
+        message: 'Invalid credentials. Please check the mobile number or email, or use Forgot Password. Not registered? Register your company.'
       });
     }
 
+    // Successful login: reset failed attempts
+    owner.failedLoginAttempts = 0;
+    owner.lockUntil = null;
     owner.lastLogin = new Date();
     await owner.save();
 
@@ -453,6 +576,7 @@ async function login(req, res, next) {
     const token = jwt.sign(
       {
         id: owner._id,
+        ownerId: owner._id,
         companyId: company._id,
         mobile: owner.mobile,
         email: owner.email,
@@ -461,6 +585,8 @@ async function login(req, res, next) {
       process.env.JWT_SECRET || 'timberbooks_super_secret_jwt_key_2026',
       { expiresIn: '30d' }
     );
+
+    console.log(`[AUTH] Login successful for ${maskIdentifier(loginId)} (Company: ${company.name})`);
 
     res.json({
       success: true,
@@ -494,10 +620,14 @@ async function verifyPin(req, res, next) {
     let owner = null;
     if (identifier) {
       const cleanId = identifier.trim();
+      const normMobile = normalizeMobile(cleanId);
+      const normEmail = normalizeEmail(cleanId);
       owner = await Owner.findOne({
         $or: [
+          { mobileNormalized: normMobile },
+          { emailLower: normEmail },
           { mobile: cleanId },
-          { email: cleanId.toLowerCase() },
+          { email: normEmail },
           { username: cleanId }
         ]
       });
@@ -526,6 +656,7 @@ async function verifyPin(req, res, next) {
     const token = jwt.sign(
       {
         id: owner._id,
+        ownerId: owner._id,
         companyId: company?._id,
         mobile: owner.mobile,
         email: owner.email,
@@ -565,17 +696,24 @@ async function forgotPasswordRequest(req, res, next) {
     }
 
     const cleanId = identifier.trim();
+    const normMobile = normalizeMobile(cleanId);
+    const normEmail = normalizeEmail(cleanId);
+
     const owner = await Owner.findOne({
       $or: [
+        { mobileNormalized: normMobile },
+        { emailLower: normEmail },
         { mobile: cleanId },
-        { email: cleanId.toLowerCase() }
+        { email: normEmail },
+        { username: cleanId }
       ]
     });
 
     if (!owner) {
+      // Generic security response
       return res.status(404).json({
         success: false,
-        message: 'No account registered with this Mobile or Email.'
+        message: 'No account registered with this Mobile or Email. Please check or register.'
       });
     }
 
@@ -584,13 +722,18 @@ async function forgotPasswordRequest(req, res, next) {
     owner.resetOtpExpires = new Date(Date.now() + 15 * 60 * 1000);
     await owner.save();
 
-    console.log(`🔐 [TimberBooks Password Reset OTP] Code for ${cleanId}: ${code}`);
+    console.log(`🔐 [TimberBooks Password Reset OTP] Generated for ${maskIdentifier(cleanId)}`);
 
-    return res.json({
+    const responseData = {
       success: true,
-      message: `Password reset OTP sent to ${cleanId}`,
-      devOtp: code
-    });
+      message: `Password reset verification code sent to ${maskIdentifier(cleanId)}`
+    };
+
+    if (process.env.NODE_ENV === 'development' && process.env.DEV_SHOW_OTP === 'true') {
+      responseData.devOtp = code;
+    }
+
+    return res.json(responseData);
   } catch (err) {
     next(err);
   }
@@ -611,11 +754,16 @@ async function resetPassword(req, res, next) {
 
     const cleanId = identifier.trim();
     const cleanOtp = String(otp).trim();
+    const normMobile = normalizeMobile(cleanId);
+    const normEmail = normalizeEmail(cleanId);
 
     const owner = await Owner.findOne({
       $or: [
+        { mobileNormalized: normMobile },
+        { emailLower: normEmail },
         { mobile: cleanId },
-        { email: cleanId.toLowerCase() }
+        { email: normEmail },
+        { username: cleanId }
       ]
     });
 
@@ -623,10 +771,11 @@ async function resetPassword(req, res, next) {
       return res.status(404).json({ success: false, message: 'Account not found.' });
     }
 
-    // Verify OTP (accept dev code 123456 or owner.resetOtp)
-    const isValidOtp = cleanOtp === '123456' || (owner.resetOtp === cleanOtp && owner.resetOtpExpires > new Date());
+    // Verify OTP
+    const isDevCode = process.env.NODE_ENV === 'development' && cleanOtp === '123456';
+    const isValidOtp = isDevCode || (owner.resetOtp === cleanOtp && owner.resetOtpExpires > new Date());
     if (!isValidOtp) {
-      return res.status(400).json({ success: false, message: 'Invalid or expired OTP.' });
+      return res.status(400).json({ success: false, message: 'Invalid or expired OTP code.' });
     }
 
     const salt = await bcrypt.genSalt(10);
@@ -641,7 +790,11 @@ async function resetPassword(req, res, next) {
 
     owner.resetOtp = null;
     owner.resetOtpExpires = null;
+    owner.failedLoginAttempts = 0;
+    owner.lockUntil = null;
     await owner.save();
+
+    console.log(`[AUTH] Password/PIN successfully reset for ${maskIdentifier(cleanId)}`);
 
     return res.json({
       success: true,
@@ -657,7 +810,7 @@ async function resetPassword(req, res, next) {
  */
 async function getMe(req, res, next) {
   try {
-    const owner = await Owner.findById(req.owner.id);
+    const owner = await Owner.findById(req.owner.id || req.owner.ownerId);
     if (!owner) return res.status(404).json({ success: false, message: 'User not found.' });
 
     const company = await Company.findById(owner.companyId);
@@ -690,7 +843,7 @@ async function getMe(req, res, next) {
 async function updateSecurity(req, res, next) {
   try {
     const { currentPassword, newPassword, newPin, biometricEnabled } = req.body;
-    const owner = await Owner.findById(req.owner.id);
+    const owner = await Owner.findById(req.owner.id || req.owner.ownerId);
     if (!owner) return res.status(404).json({ success: false, message: 'User not found.' });
 
     if (currentPassword) {

@@ -18,6 +18,7 @@ import { useTranslation, AVAILABLE_LANGUAGES } from '../../i18n/LanguageContext'
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import CustomInput from '../../components/CustomInput';
 import ServerConfigModal from '../../components/ServerConfigModal';
+import DeveloperInfoModal from '../../components/DeveloperInfoModal';
 import { CURRENT_VERSION } from '../../services/updateService';
 
 export default function LoginScreen({ navigation }) {
@@ -25,6 +26,25 @@ export default function LoginScreen({ navigation }) {
   const { login, loginWithPin } = useAuth();
   const { t, language, setLanguage } = useTranslation();
   const [showServerModal, setShowServerModal] = useState(false);
+  const [showDevModal, setShowDevModal] = useState(false);
+  const [versionTapCount, setVersionTapCount] = useState(0);
+  const lastTapRef = React.useRef(0);
+
+  const handleVersionTap = () => {
+    const now = Date.now();
+    if (now - lastTapRef.current > 3000) {
+      setVersionTapCount(1);
+    } else {
+      const nextCount = versionTapCount + 1;
+      if (nextCount >= 5) {
+        setShowDevModal(true);
+        setVersionTapCount(0);
+      } else {
+        setVersionTapCount(nextCount);
+      }
+    }
+    lastTapRef.current = now;
+  };
 
   // Mode: 'password' | 'pin'
   const [authMode, setAuthMode] = useState('password');
@@ -131,14 +151,16 @@ export default function LoginScreen({ navigation }) {
           </TouchableOpacity>
 
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <TouchableOpacity
-              style={styles.serverPill}
-              onPress={() => setShowServerModal(true)}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="wifi-outline" size={13} color={colors.goldPrimary} style={{ marginRight: 4 }} />
-              <Text style={styles.serverPillText}>Server</Text>
-            </TouchableOpacity>
+            {__DEV__ ? (
+              <TouchableOpacity
+                style={styles.serverPill}
+                onPress={() => setShowServerModal(true)}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="wifi-outline" size={13} color={colors.goldPrimary} style={{ marginRight: 4 }} />
+                <Text style={styles.serverPillText}>Server</Text>
+              </TouchableOpacity>
+            ) : null}
 
             <View style={styles.languagePillContainer}>
               {AVAILABLE_LANGUAGES.map((lang) => (
@@ -365,16 +387,21 @@ export default function LoginScreen({ navigation }) {
         </View>
 
         {/* Security & Version Footer Note */}
-        <View style={styles.footerNote}>
+        <TouchableOpacity style={styles.footerNote} onPress={handleVersionTap} activeOpacity={0.85}>
           <Ionicons name="shield-checkmark-outline" size={14} color={colors.textMuted} style={{ marginRight: 6 }} />
           <Text style={styles.footerText}>Secure Multi-Tenant Cloud • TimberBooks v{CURRENT_VERSION}</Text>
-        </View>
+        </TouchableOpacity>
       </ScrollView>
 
       {/* Server Config Modal */}
       <ServerConfigModal
         visible={showServerModal}
         onClose={() => setShowServerModal(false)}
+      />
+      {/* Developer & Health Info Modal (5 taps on version) */}
+      <DeveloperInfoModal
+        visible={showDevModal}
+        onClose={() => setShowDevModal(false)}
       />
     </KeyboardAvoidingView>
   );
