@@ -45,9 +45,15 @@ router.get('/financial-years', authMiddleware, financialYearController.getFinanc
 router.post('/financial-years', authMiddleware, financialYearController.createFinancialYear);
 router.post('/financial-years/switch', authMiddleware, financialYearController.switchFinancialYear);
 
-// 3. Company
+// 3. Multi-Company & Tenant Management
 router.get('/company', authMiddleware, companyController.getCompany);
 router.put('/company', authMiddleware, companyController.updateCompany);
+router.get('/companies', authMiddleware, companyController.getMyCompanies);
+router.post('/companies', authMiddleware, companyController.createCompany);
+router.patch('/companies/:id', authMiddleware, companyController.updateCompanyById);
+router.put('/companies/:id', authMiddleware, companyController.updateCompanyById);
+router.post('/companies/:id/switch', authMiddleware, companyController.switchCompany);
+router.post('/companies/:id/archive', authMiddleware, companyController.archiveCompany);
 
 // 4. Ledgers (Parties, Banks, Accounts)
 router.get('/ledgers/groups', authMiddleware, ledgerController.getLedgerGroups);

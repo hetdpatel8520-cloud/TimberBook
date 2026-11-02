@@ -539,21 +539,44 @@ async function login(req, res, next) {
     owner.lastLogin = new Date();
     await owner.save();
 
-    const company = await Company.findById(owner.companyId);
-    if (!company) {
-      return res.status(404).json({ success: false, message: 'Company associated with this account was not found.' });
+    let companies = await Company.find({
+      ownerId: owner._id,
+      isArchived: { $ne: true }
+    }).sort({ isDefault: -1, createdAt: 1 });
+
+    let activeCompany = null;
+    const targetCompId = owner.activeCompanyId || owner.companyId;
+    if (targetCompId) {
+      activeCompany = companies.find(c => String(c._id) === String(targetCompId));
+    }
+    if (!activeCompany && companies.length > 0) {
+      activeCompany = companies[0];
+      owner.activeCompanyId = activeCompany._id;
+      owner.companyId = activeCompany._id;
+      await owner.save();
+    }
+
+    if (!activeCompany) {
+      activeCompany = await Company.findById(owner.companyId);
+      if (activeCompany) {
+        activeCompany.ownerId = owner._id;
+        await activeCompany.save();
+        companies = [activeCompany];
+      } else {
+        return res.status(404).json({ success: false, message: 'Company associated with this account was not found.' });
+      }
     }
 
     const currentFY = await FinancialYear.findOne({
-      companyId: company._id,
+      companyId: activeCompany._id,
       isCurrent: true
-    }) || await FinancialYear.findOne({ companyId: company._id });
+    }) || await FinancialYear.findOne({ companyId: activeCompany._id });
 
     const token = jwt.sign(
       {
         id: owner._id,
         ownerId: owner._id,
-        companyId: company._id,
+        companyId: activeCompany._id,
         mobile: owner.mobile,
         email: owner.email,
         fullName: owner.fullName
@@ -562,7 +585,7 @@ async function login(req, res, next) {
       { expiresIn: '30d' }
     );
 
-    console.log(`[AUTH] Login successful for ${maskIdentifier(loginId)} (Company: ${company.name})`);
+    console.log(`[AUTH] Login successful for ${maskIdentifier(loginId)} (Company: ${activeCompany.name})`);
 
     res.json({
       success: true,
@@ -573,9 +596,11 @@ async function login(req, res, next) {
         mobile: owner.mobile,
         email: owner.email,
         biometricEnabled: owner.biometricEnabled,
-        hasPin: !!owner.pinHash
+        hasPin: !!owner.pinHash,
+        activeCompanyId: activeCompany._id
       },
-      company,
+      company: activeCompany,
+      companies,
       financialYear: currentFY
     });
   } catch (err) {
@@ -623,17 +648,34 @@ async function verifyPin(req, res, next) {
       return res.status(401).json({ success: false, message: 'Incorrect PIN.' });
     }
 
-    const company = await Company.findById(owner.companyId);
-    const currentFY = await FinancialYear.findOne({
-      companyId: company?._id,
+    let companies = await Company.find({
+      ownerId: owner._id,
+      isArchived: { $ne: true }
+    }).sort({ isDefault: -1, createdAt: 1 });
+
+    let activeCompany = null;
+    const targetCompId = owner.activeCompanyId || owner.companyId;
+    if (targetCompId) {
+      activeCompany = companies.find(c => String(c._id) === String(targetCompId));
+    }
+    if (!activeCompany && companies.length > 0) {
+      activeCompany = companies[0];
+    }
+    if (!activeCompany) {
+      activeCompany = await Company.findById(owner.companyId);
+      if (activeCompany) companies = [activeCompany];
+    }
+
+    const currentFY = activeCompany ? (await FinancialYear.findOne({
+      companyId: activeCompany._id,
       isCurrent: true
-    });
+    }) || await FinancialYear.findOne({ companyId: activeCompany._id })) : null;
 
     const token = jwt.sign(
       {
         id: owner._id,
         ownerId: owner._id,
-        companyId: company?._id,
+        companyId: activeCompany?._id,
         mobile: owner.mobile,
         email: owner.email,
         fullName: owner.fullName
@@ -651,9 +693,11 @@ async function verifyPin(req, res, next) {
         mobile: owner.mobile,
         email: owner.email,
         biometricEnabled: owner.biometricEnabled,
-        hasPin: true
+        hasPin: true,
+        activeCompanyId: activeCompany?._id
       },
-      company,
+      company: activeCompany,
+      companies,
       financialYear: currentFY
     });
   } catch (err) {
@@ -778,14 +822,21 @@ async function resetPassword(req, res, next) {
  */
 async function getMe(req, res, next) {
   try {
-    const owner = await Owner.findById(req.owner.id || req.owner.ownerId);
+    const ownerId = req.ownerId || req.owner?.id || req.owner?.ownerId;
+    const owner = await Owner.findById(ownerId);
     if (!owner) return res.status(404).json({ success: false, message: 'User not found.' });
 
-    const company = await Company.findById(owner.companyId);
-    const financialYear = await FinancialYear.findOne({
-      companyId: owner.companyId,
+    const companies = await Company.find({
+      ownerId,
+      isArchived: { $ne: true }
+    }).sort({ isDefault: -1, createdAt: 1 });
+
+    const activeCompany = req.company || companies.find(c => String(c._id) === String(req.companyId)) || companies[0];
+
+    const financialYear = activeCompany ? await FinancialYear.findOne({
+      companyId: activeCompany._id,
       isCurrent: true
-    });
+    }) : null;
 
     res.json({
       success: true,
@@ -795,9 +846,11 @@ async function getMe(req, res, next) {
         mobile: owner.mobile,
         email: owner.email,
         biometricEnabled: owner.biometricEnabled,
-        hasPin: !!owner.pinHash
+        hasPin: !!owner.pinHash,
+        activeCompanyId: activeCompany?._id
       },
-      company,
+      company: activeCompany,
+      companies,
       financialYear
     });
   } catch (err) {
