@@ -9,6 +9,7 @@ const LedgerGroup = require('../models/LedgerGroup');
 const Settings = require('../models/Settings');
 const { normalizeEmail, normalizeMobile, maskIdentifier } = require('../utils/normalize');
 const { generateAndDeliverOtp, verifySubmittedOtp } = require('../services/otpService');
+const { seedCompanyDefaults } = require('../utils/seedCompanyDefaults');
 
 // In-memory OTP storage for registration verification (fallback / demo)
 const otpStore = new Map();
@@ -69,59 +70,63 @@ async function findLegacyAccount(loginId, normMobile, normEmail) {
 async function checkDuplicate(req, res, next) {
   try {
     const { mobile, email, gstin } = req.body;
+    const maxCompanies = parseInt(process.env.MAX_COMPANIES_PER_OWNER, 10) || 5;
 
-    if (mobile) {
-      const cleanMobile = mobile.trim();
-      const normMobile = normalizeMobile(cleanMobile);
-      const existing = await Owner.findOne({
+    const cleanMobile = mobile ? mobile.trim() : '';
+    const normMobile = cleanMobile ? normalizeMobile(cleanMobile) : '';
+    const cleanEmail = email ? email.trim().toLowerCase() : '';
+    const normEmail = cleanEmail ? normalizeEmail(cleanEmail) : '';
+
+    // Check existing owner by mobile or email
+    let existingOwner = null;
+    if (cleanMobile || cleanEmail) {
+      existingOwner = await Owner.findOne({
         $or: [
-          { mobileNormalized: normMobile },
-          { mobile: cleanMobile }
+          ...(normMobile ? [{ mobileNormalized: normMobile }, { mobile: cleanMobile }] : []),
+          ...(normEmail ? [{ emailLower: normEmail }, { email: cleanEmail }] : [])
         ]
       });
-      if (existing) {
-        return res.json({
-          success: false,
-          isDuplicate: true,
-          field: 'mobile',
-          message: `A company is already registered with mobile number ${cleanMobile}. Please log in.`
-        });
-      }
     }
 
-    if (email) {
-      const cleanEmail = email.trim().toLowerCase();
-      const normEmail = normalizeEmail(cleanEmail);
-      const existing = await Owner.findOne({
-        $or: [
-          { emailLower: normEmail },
-          { email: cleanEmail }
-        ]
+    if (existingOwner) {
+      const companyCount = await Company.countDocuments({
+        ownerId: existingOwner._id,
+        isArchived: { $ne: true }
       });
-      if (existing) {
+
+      if (companyCount >= maxCompanies) {
         return res.json({
           success: false,
           isDuplicate: true,
-          field: 'email',
-          message: `A company is already registered with email ${cleanEmail}. Please log in.`
+          message: `Account found for ${existingOwner.fullName}, but the maximum limit of ${maxCompanies} companies has been reached.`
         });
       }
+
+      return res.json({
+        success: true,
+        isDuplicate: false,
+        isExistingOwner: true,
+        ownerId: existingOwner._id,
+        ownerName: existingOwner.fullName,
+        companyCount,
+        message: `Account found for ${existingOwner.fullName} (${companyCount} existing company).`
+      });
     }
 
     if (gstin && gstin.trim().length >= 10) {
       const cleanGstin = gstin.trim().toUpperCase();
-      const existing = await Company.findOne({ gstin: cleanGstin });
-      if (existing) {
+      const existingGst = await Company.findOne({ gstin: cleanGstin, isArchived: { $ne: true } });
+      if (existingGst) {
         return res.json({
           success: false,
           isDuplicate: true,
           field: 'gstin',
-          message: `A company is already registered with GSTIN ${cleanGstin}. Please log in.`
+          message: `GSTIN ${cleanGstin} is already registered with company "${existingGst.name}".`
         });
       }
     }
 
-    return res.json({ success: true, isDuplicate: false });
+    return res.json({ success: true, isDuplicate: false, isExistingOwner: false });
   } catch (err) {
     next(err);
   }
@@ -234,32 +239,61 @@ async function registerCompany(req, res, next) {
     const normEmail = normalizeEmail(cleanEmail);
     const cleanGstin = gstin.trim().toUpperCase();
 
-    // 2. Duplicate Checks
-    const [existingMobile, existingEmail] = await Promise.all([
-      Owner.findOne({ $or: [{ mobileNormalized: normMobile }, { mobile: cleanMobile }] }),
-      Owner.findOne({ $or: [{ emailLower: normEmail }, { email: cleanEmail }] })
-    ]);
+    // 2. Duplicate Checks & Existing Owner Resolution
+    const existingOwner = await Owner.findOne({
+      $or: [
+        { mobileNormalized: normMobile },
+        { emailLower: normEmail },
+        { mobile: cleanMobile },
+        { email: cleanEmail }
+      ]
+    });
 
-    if (existingMobile) {
-      return res.status(400).json({
-        success: false,
-        message: `Mobile number ${cleanMobile} is already registered. Please log in.`
+    let owner = existingOwner;
+    const maxCompanies = parseInt(process.env.MAX_COMPANIES_PER_OWNER, 10) || 5;
+
+    if (owner) {
+      const existingCount = await Company.countDocuments({
+        ownerId: owner._id,
+        isArchived: { $ne: true }
       });
-    }
+      if (existingCount >= maxCompanies) {
+        return res.status(400).json({
+          success: false,
+          message: `Maximum limit of ${maxCompanies} companies reached for this account.`
+        });
+      }
+    } else {
+      if (!password || password.length < 6) {
+        return res.status(400).json({ success: false, message: 'Password must be at least 6 characters.' });
+      }
+      const salt = await bcrypt.genSalt(10);
+      const passwordHash = await bcrypt.hash(password, salt);
+      let pinHash = null;
+      if (pin && String(pin).length >= 4) {
+        pinHash = await bcrypt.hash(String(pin), salt);
+      }
 
-    if (existingEmail) {
-      return res.status(400).json({
-        success: false,
-        message: `Email ${cleanEmail} is already registered. Please log in.`
+      owner = await Owner.create({
+        fullName: fullName.trim(),
+        mobile: cleanMobile,
+        mobileNormalized: normMobile,
+        email: cleanEmail,
+        emailLower: normEmail,
+        username: normMobile || cleanMobile,
+        passwordHash,
+        pinHash,
+        biometricEnabled: !!pinHash,
+        isVerified: true
       });
     }
 
     if (cleanGstin) {
-      const existingGstin = await Company.findOne({ gstin: cleanGstin });
+      const existingGstin = await Company.findOne({ gstin: cleanGstin, isArchived: { $ne: true } });
       if (existingGstin) {
         return res.status(400).json({
           success: false,
-          message: `GSTIN ${cleanGstin} is already registered to another company.`
+          message: `GSTIN ${cleanGstin} is already registered with company "${existingGstin.name}".`
         });
       }
     }
@@ -280,8 +314,10 @@ async function registerCompany(req, res, next) {
       pincode: pincode.trim(),
       phone: (phone || cleanMobile).trim(),
       email: companyEmail.trim().toLowerCase() || cleanEmail,
+      companyEmail: companyEmail.trim().toLowerCase() || cleanEmail,
       gstin: cleanGstin,
       pan: pan.trim().toUpperCase() || (cleanGstin.length >= 14 ? cleanGstin.substring(2, 12) : ''),
+      ownerId: owner._id,
       bankDetails: {
         bankName: bankName.trim(),
         accountName: companyName.trim(),
@@ -290,126 +326,27 @@ async function registerCompany(req, res, next) {
         branch: branch.trim() || city.trim()
       },
       logoUrl,
-      signatureUrl
+      signatureUrl,
+      isDefault: false,
+      isArchived: false
     });
 
-    // 4. Hash Password & PIN
-    const salt = await bcrypt.genSalt(10);
-    const passwordHash = await bcrypt.hash(password, salt);
-    let pinHash = null;
-    if (pin && String(pin).length >= 4) {
-      pinHash = await bcrypt.hash(String(pin), salt);
-    }
+    // 4. Update owner active company pointers
+    owner.activeCompanyId = company._id;
+    owner.companyId = company._id;
+    await owner.save();
 
-    // 5. Create Owner
-    const owner = await Owner.create({
-      fullName: fullName.trim(),
-      mobile: cleanMobile,
-      mobileNormalized: normMobile,
-      email: cleanEmail,
-      emailLower: normEmail,
-      username: normMobile || cleanMobile,
-      passwordHash,
-      pinHash,
-      companyId: company._id,
-      biometricEnabled: !!pinHash,
-      isVerified: true
+    // 5. Seed masters using seedCompanyDefaults
+    const { financialYear } = await seedCompanyDefaults({
+      company,
+      owner,
+      fyFrom,
+      fyTo,
+      bankName,
+      accountNo
     });
 
-    // Link ownerId on Company
-    company.ownerId = owner._id;
-    await company.save();
-
-    // 6. Create Initial Financial Year
-    const now = new Date();
-    const startYear = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
-    const defaultFrom = new Date(startYear, 3, 1);
-    const defaultTo = new Date(startYear + 1, 2, 31);
-
-    const startDate = fyFrom ? new Date(fyFrom) : defaultFrom;
-    const endDate = fyTo ? new Date(fyTo) : defaultTo;
-    const fyCode = `${startDate.getFullYear()}-${endDate.getFullYear()}`;
-    const fyName = `FY ${startDate.getFullYear()}-${String(endDate.getFullYear()).slice(-2)}`;
-
-    const financialYear = await FinancialYear.create({
-      companyId: company._id,
-      code: fyCode,
-      name: fyName,
-      startDate,
-      endDate,
-      isCurrent: true,
-      counters: {
-        invoice: 1,
-        purchase: 1,
-        receipt: 1,
-        payment: 1,
-        contra: 1
-      }
-    });
-
-    // 7. Seed Standard Indian ERP Chart of Accounts
-    const standardGroups = [
-      { name: 'Sundry Debtors', nature: 'Asset', isSystem: true },
-      { name: 'Sundry Creditors', nature: 'Liability', isSystem: true },
-      { name: 'Cash-in-Hand', nature: 'Asset', isSystem: true },
-      { name: 'Bank Accounts', nature: 'Asset', isSystem: true },
-      { name: 'Sales Accounts', nature: 'Income', isSystem: true },
-      { name: 'Purchase Accounts', nature: 'Expense', isSystem: true },
-      { name: 'Direct Expenses', nature: 'Expense', isSystem: true },
-      { name: 'Indirect Expenses', nature: 'Expense', isSystem: true },
-      { name: 'Duties & Taxes', nature: 'Liability', isSystem: true },
-      { name: 'Capital Account', nature: 'Liability', isSystem: true }
-    ];
-
-    for (const grp of standardGroups) {
-      await LedgerGroup.findOneAndUpdate(
-        { name: grp.name, companyId: null },
-        { ...grp, companyId: null },
-        { upsert: true }
-      );
-    }
-
-    // 8. Default Cash Ledger
-    await Ledger.create({
-      companyId: company._id,
-      name: 'Cash in Hand',
-      group: 'Cash-in-Hand',
-      taxType: 'Local',
-      city: company.city,
-      state: company.state,
-      stateCode: company.stateCode,
-      openingBalance: 0,
-      openingBalanceType: 'Dr',
-      currentBalance: 0,
-      currentBalanceType: 'Dr'
-    });
-
-    // Default Bank Ledger if bankName was entered
-    if (bankName.trim()) {
-      await Ledger.create({
-        companyId: company._id,
-        name: `${bankName.trim()} (${accountNo ? accountNo.trim().slice(-4) : 'Account'})`,
-        group: 'Bank Accounts',
-        taxType: 'Local',
-        city: company.city,
-        state: company.state,
-        stateCode: company.stateCode,
-        openingBalance: 0,
-        openingBalanceType: 'Dr',
-        currentBalance: 0,
-        currentBalanceType: 'Dr'
-      });
-    }
-
-    // 9. Initial Settings
-    const settings = await Settings.create({
-      companyId: company._id,
-      invoicePrefix: '',
-      currentFinancialYearId: financialYear._id,
-      biometricRequired: !!pinHash
-    });
-
-    // 10. Issue JWT
+    // 6. Issue JWT
     const token = jwt.sign(
       {
         id: owner._id,

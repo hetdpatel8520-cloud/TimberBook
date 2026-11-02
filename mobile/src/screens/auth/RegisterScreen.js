@@ -48,6 +48,7 @@ export default function RegisterScreen({ navigation }) {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
+  const [isExistingOwner, setIsExistingOwner] = useState(false);
 
   // Form State across all 4 steps
   const [form, setForm] = useState({
@@ -161,8 +162,36 @@ export default function RegisterScreen({ navigation }) {
         mobile: form.mobile.trim(),
         email: form.email.trim()
       });
+
+      if (dupRes.isExistingOwner) {
+        return new Promise((resolve) => {
+          Alert.alert(
+            'Existing Account Found',
+            `Account found for ${dupRes.ownerName}.` + '\n\n' +
+            'Would you like to add this new company under your existing account?',
+            [
+              {
+                text: 'Sign In Instead',
+                style: 'cancel',
+                onPress: () => {
+                  navigation.navigate('Login');
+                  resolve(false);
+                }
+              },
+              {
+                text: 'Add Company',
+                onPress: () => {
+                  setIsExistingOwner(true);
+                  resolve(true);
+                }
+              }
+            ]
+          );
+        });
+      }
+
       if (dupRes.isDuplicate) {
-        Alert.alert('Already Registered', dupRes.message);
+        Alert.alert('Cannot Proceed', dupRes.message);
         return false;
       }
       return true;
