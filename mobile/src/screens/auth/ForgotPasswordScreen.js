@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -30,7 +30,6 @@ export default function ForgotPasswordScreen({ navigation }) {
   const [newPin, setNewPin] = useState('');
 
   const [loading, setLoading] = useState(false);
-  const [devOtpHint, setDevOtpHint] = useState('');
 
   const handleRequestOtp = async () => {
     if (!identifier.trim()) {
@@ -41,13 +40,29 @@ export default function ForgotPasswordScreen({ navigation }) {
     try {
       setLoading(true);
       const res = await forgotPassword(identifier.trim());
-      setDevOtpHint(res.devOtp || '123456');
-      Alert.alert('OTP Sent', `A 6-digit password reset code has been sent to ${identifier.trim()}`);
+      setTargetMasked(res.targetMasked || identifier.trim());
+      setResendCooldown(30);
+      setOtp('');
       setStage(2);
     } catch (err) {
       Alert.alert('Request Failed', err.message || 'Account not found matching this contact.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (resendCooldown > 0) return;
+    try {
+      setResending(true);
+      const res = await forgotPassword(identifier.trim());
+      setTargetMasked(res.targetMasked || identifier.trim());
+      setResendCooldown(30);
+      Alert.alert('Code Sent', 'A new verification code has been sent to ' + (res.targetMasked || identifier.trim()));
+    } catch (err) {
+      Alert.alert('Resend Failed', err.message || 'Could not resend OTP.');
+    } finally {
+      setResending(false);
     }
   };
 
@@ -167,14 +182,10 @@ export default function ForgotPasswordScreen({ navigation }) {
             <View>
               <Text style={styles.cardTitle}>Enter OTP & New Password</Text>
               <Text style={styles.cardSubtitle}>
-                Enter the 6-digit code sent to {identifier} and create your new login password or Quick PIN.
+                Enter the 6-digit code sent to {targetMasked || identifier} and create your new login password or Quick PIN.
               </Text>
 
-              {devOtpHint ? (
-                <View style={styles.devOtpBadge}>
-                  <Text style={styles.devOtpText}>Verification Code: {devOtpHint}</Text>
-                </View>
-              ) : null}
+              
 
               <Text style={styles.fieldLabel}>6-DIGIT OTP CODE *</Text>
               <TextInput
@@ -336,20 +347,19 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     backgroundColor: '#F8FAFC'
   },
-  devOtpBadge: {
-    backgroundColor: '#FFFBEA',
-    borderWidth: 1,
-    borderColor: '#FDE68A',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    marginBottom: 14,
-    alignSelf: 'center'
+  resendRow: {
+    alignItems: 'center',
+    marginBottom: 16
   },
-  devOtpText: {
-    fontSize: 12,
+  resendCountdownText: {
+    fontSize: 13,
+    color: colors.slateGrey
+  },
+  resendActionText: {
+    fontSize: 13,
     fontWeight: '700',
-    color: '#92400E'
+    color: colors.navyPrimary,
+    textDecorationLine: 'underline'
   },
   actionBtn: {
     backgroundColor: colors.goldPrimary,

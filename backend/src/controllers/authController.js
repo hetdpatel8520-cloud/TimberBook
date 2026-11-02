@@ -8,6 +8,7 @@ const Ledger = require('../models/Ledger');
 const LedgerGroup = require('../models/LedgerGroup');
 const Settings = require('../models/Settings');
 const { normalizeEmail, normalizeMobile, maskIdentifier } = require('../utils/normalize');
+const { generateAndDeliverOtp, verifySubmittedOtp } = require('../services/otpService');
 
 // In-memory OTP storage for registration verification (fallback / demo)
 const otpStore = new Map();
@@ -131,33 +132,25 @@ async function checkDuplicate(req, res, next) {
  */
 async function sendOtp(req, res, next) {
   try {
-    const { mobile, email } = req.body;
+    const { mobile, email, fullName, channel = 'all' } = req.body;
     if (!mobile && !email) {
       return res.status(400).json({ success: false, message: 'Mobile number or email is required.' });
     }
 
-    const rawTarget = (mobile || email).trim();
-    const key = rawTarget.includes('@') ? normalizeEmail(rawTarget) : normalizeMobile(rawTarget);
+    const delivery = await generateAndDeliverOtp({
+      mobile,
+      email,
+      fullName,
+      channel
+    });
 
-    // Generate 6-digit OTP
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
-
-    otpStore.set(key, { code, expiresAt });
-
-    console.log(`📱 [TimberBooks OTP] Code generated for ${maskIdentifier(rawTarget)}`);
-
-    const responseData = {
+    return res.json({
       success: true,
-      message: `Verification code sent to ${maskIdentifier(rawTarget)}`
-    };
-
-    // In local development only, permit devOtp for automated test convenience
-    if (process.env.NODE_ENV === 'development' && process.env.DEV_SHOW_OTP === 'true') {
-      responseData.devOtp = code;
-    }
-
-    return res.json(responseData);
+      message: `Verification code sent to ${delivery.targetMasked}`,
+      targetMasked: delivery.targetMasked,
+      emailSent: delivery.emailSent,
+      smsSent: delivery.smsSent
+    });
   } catch (err) {
     next(err);
   }
@@ -168,31 +161,14 @@ async function sendOtp(req, res, next) {
  */
 async function verifyOtp(req, res, next) {
   try {
-    const { mobile, email, otp, code } = req.body;
-    const rawTarget = (mobile || email || '').trim();
-    const key = rawTarget.includes('@') ? normalizeEmail(rawTarget) : normalizeMobile(rawTarget);
-    const enteredOtp = (otp || code || '').trim();
+    const { mobile, email, identifier, otp, code } = req.body;
+    const target = email || mobile || identifier;
+    const result = verifySubmittedOtp(target, otp || code);
 
-    // Standard dev fallback: 123456 accepted in development only
-    if (process.env.NODE_ENV === 'development' && enteredOtp === '123456') {
-      return res.json({ success: true, verified: true });
+    if (!result.success) {
+      return res.status(400).json({ success: false, message: result.message });
     }
 
-    const record = otpStore.get(key);
-    if (!record) {
-      return res.status(400).json({ success: false, message: 'No OTP requested for this contact or it expired. Please request a new OTP.' });
-    }
-
-    if (Date.now() > record.expiresAt) {
-      otpStore.delete(key);
-      return res.status(400).json({ success: false, message: 'OTP has expired. Please request a new code.' });
-    }
-
-    if (record.code !== enteredOtp) {
-      return res.status(400).json({ success: false, message: 'Invalid OTP code. Please enter the correct 6-digit code.' });
-    }
-
-    otpStore.delete(key);
     return res.json({ success: true, verified: true });
   } catch (err) {
     next(err);
@@ -690,7 +666,7 @@ async function verifyPin(req, res, next) {
  */
 async function forgotPasswordRequest(req, res, next) {
   try {
-    const { identifier } = req.body;
+    const { identifier, channel = 'all' } = req.body;
     if (!identifier) {
       return res.status(400).json({ success: false, message: 'Registered mobile number or email is required.' });
     }
@@ -710,30 +686,24 @@ async function forgotPasswordRequest(req, res, next) {
     });
 
     if (!owner) {
-      // Generic security response
       return res.status(404).json({
         success: false,
         message: 'No account registered with this Mobile or Email. Please check or register.'
       });
     }
 
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    owner.resetOtp = code;
-    owner.resetOtpExpires = new Date(Date.now() + 15 * 60 * 1000);
-    await owner.save();
+    const delivery = await generateAndDeliverOtp({
+      mobile: owner.mobile,
+      email: owner.email,
+      fullName: owner.fullName,
+      channel
+    });
 
-    console.log(`🔐 [TimberBooks Password Reset OTP] Generated for ${maskIdentifier(cleanId)}`);
-
-    const responseData = {
+    return res.json({
       success: true,
-      message: `Password reset verification code sent to ${maskIdentifier(cleanId)}`
-    };
-
-    if (process.env.NODE_ENV === 'development' && process.env.DEV_SHOW_OTP === 'true') {
-      responseData.devOtp = code;
-    }
-
-    return res.json(responseData);
+      message: `Password reset verification code sent to ${delivery.targetMasked}`,
+      targetMasked: delivery.targetMasked
+    });
   } catch (err) {
     next(err);
   }
@@ -771,11 +741,9 @@ async function resetPassword(req, res, next) {
       return res.status(404).json({ success: false, message: 'Account not found.' });
     }
 
-    // Verify OTP
-    const isDevCode = process.env.NODE_ENV === 'development' && cleanOtp === '123456';
-    const isValidOtp = isDevCode || (owner.resetOtp === cleanOtp && owner.resetOtpExpires > new Date());
-    if (!isValidOtp) {
-      return res.status(400).json({ success: false, message: 'Invalid or expired OTP code.' });
+    const verifyResult = verifySubmittedOtp(owner.email || owner.mobile, cleanOtp);
+    if (!verifyResult.success) {
+      return res.status(400).json({ success: false, message: verifyResult.message });
     }
 
     const salt = await bcrypt.genSalt(10);

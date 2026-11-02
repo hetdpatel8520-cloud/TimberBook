@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -20,6 +20,22 @@ import { useTranslation } from '../../i18n/LanguageContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import CustomInput from '../../components/CustomInput';
 import { INDIAN_STATES, getStateCodeByName, isValidGstin, isValidPan } from '../../utils/indianStates';
+
+function maskEmail(email) {
+  if (!email || !email.includes('@')) return email || '';
+  const parts = email.split('@');
+  const user = parts[0];
+  const domain = parts[1];
+  if (user.length <= 2) return user[0] + '*@' + domain;
+  return user[0] + '*'.repeat(Math.max(1, user.length - 2)) + user[user.length - 1] + '@' + domain;
+}
+
+function maskMobile(mobile) {
+  if (!mobile) return '';
+  const clean = mobile.replace(/[^0-9]/g, '');
+  if (clean.length < 5) return clean;
+  return clean.substring(0, 2) + '*'.repeat(Math.max(1, clean.length - 4)) + clean.slice(-2);
+}
 
 const BUSINESS_TYPES = ['Timber Trader', 'Saw Mill', 'Firewood Supplier', 'Other'];
 
@@ -79,7 +95,22 @@ export default function RegisterScreen({ navigation }) {
   const [showOtpModal, setShowOtpModal] = useState(false);
   const [otpCode, setOtpCode] = useState('');
   const [otpLoading, setOtpLoading] = useState(false);
-  const [devOtpHint, setDevOtpHint] = useState('');
+  const [otpChannel, setOtpChannel] = useState('email');
+  const [targetMasked, setTargetMasked] = useState('');
+  const [resendCooldown, setResendCooldown] = useState(30);
+  const [resending, setResending] = useState(false);
+
+  useEffect(() => {
+    let timer;
+    if (showOtpModal && resendCooldown > 0) {
+      timer = setInterval(() => {
+        setResendCooldown((prev) => (prev > 0 ? prev - 1 : 0));
+      }, 1000);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [showOtpModal, resendCooldown]);
 
   const update = (field, val) => {
     setForm((prev) => {
@@ -224,7 +255,7 @@ export default function RegisterScreen({ navigation }) {
   };
 
   // Step 4: Trigger OTP Verification before finalizing
-  const handleInitiateRegistration = async () => {
+  const handleInitiateRegistration = async (targetChannel = otpChannel) => {
     if (!form.agreedToTerms) {
       Alert.alert('Terms Required', 'Please accept the Terms of Service & Privacy Policy to proceed.');
       return;
@@ -234,15 +265,43 @@ export default function RegisterScreen({ navigation }) {
       setLoading(true);
       const res = await sendOtp({
         mobile: form.mobile.trim(),
-        email: form.email.trim()
+        email: form.email.trim(),
+        fullName: form.fullName.trim(),
+        channel: targetChannel
       });
 
-      setDevOtpHint(res.devOtp || '123456');
+      const displayTarget = res.targetMasked || (targetChannel === 'email' ? maskEmail(form.email) : maskMobile(form.mobile));
+      setTargetMasked(displayTarget);
+      setResendCooldown(30);
+      setOtpCode('');
       setShowOtpModal(true);
     } catch (err) {
       Alert.alert('OTP Request Error', err.message || 'Could not send verification OTP.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResendOtp = async (channelToUse) => {
+    const ch = channelToUse || otpChannel;
+    if (resendCooldown > 0 && !channelToUse) return;
+    try {
+      setResending(true);
+      const res = await sendOtp({
+        mobile: form.mobile.trim(),
+        email: form.email.trim(),
+        fullName: form.fullName.trim(),
+        channel: ch
+      });
+      if (channelToUse) setOtpChannel(channelToUse);
+      const displayTarget = res.targetMasked || (ch === 'email' ? maskEmail(form.email) : maskMobile(form.mobile));
+      setTargetMasked(displayTarget);
+      setResendCooldown(30);
+      Alert.alert('Code Sent', 'A new 6-digit verification code has been sent to ' + displayTarget);
+    } catch (err) {
+      Alert.alert('Resend Failed', err.message || 'Could not resend OTP.');
+    } finally {
+      setResending(false);
     }
   };
 
@@ -824,26 +883,66 @@ export default function RegisterScreen({ navigation }) {
       </Modal>
 
       {/* OTP VERIFICATION MODAL */}
-      <Modal visible={showOtpModal} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
+      <Modal visible={showOtpModal} transparent animationType="fade" onRequestClose={() => setShowOtpModal(false)}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={styles.modalOverlay}
+        >
           <View style={styles.otpModalCard}>
             <View style={styles.otpIconCircle}>
-              <Ionicons name="phone-portrait-outline" size={32} color={colors.goldPrimary} />
+              <Ionicons name="shield-checkmark-outline" size={32} color={colors.goldPrimary} />
             </View>
-            <Text style={styles.otpModalTitle}>Verify Mobile OTP</Text>
+            <Text style={styles.otpModalTitle}>Verify Your Account</Text>
             <Text style={styles.otpModalSubtitle}>
-              Enter the 6-digit verification code sent to {form.mobile}
+              Enter the 6-digit verification code sent to{' '}
+              <Text style={{ fontWeight: '700', color: colors.navyDark }}>{targetMasked || form.email || form.mobile}</Text>
             </Text>
 
-            {devOtpHint ? (
-              <View style={styles.devOtpBadge}>
-                <Text style={styles.devOtpText}>Instant Verification Code: {devOtpHint}</Text>
-              </View>
-            ) : null}
+            {/* Delivery Channel Selector */}
+            <View style={styles.channelRow}>
+              <TouchableOpacity
+                style={[styles.channelChip, otpChannel === 'email' && styles.channelChipActive]}
+                onPress={() => {
+                  setOtpChannel('email');
+                  handleResendOtp('email');
+                }}
+                disabled={resending}
+              >
+                <Ionicons
+                  name="mail-outline"
+                  size={14}
+                  color={otpChannel === 'email' ? colors.navyDark : colors.slateGrey}
+                  style={{ marginRight: 6 }}
+                />
+                <Text style={[styles.channelText, otpChannel === 'email' && styles.channelTextActive]}>
+                  Send via Email
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.channelChip, otpChannel === 'mobile' && styles.channelChipActive]}
+                onPress={() => {
+                  setOtpChannel('mobile');
+                  handleResendOtp('mobile');
+                }}
+                disabled={resending}
+              >
+                <Ionicons
+                  name="phone-portrait-outline"
+                  size={14}
+                  color={otpChannel === 'mobile' ? colors.navyDark : colors.slateGrey}
+                  style={{ marginRight: 6 }}
+                />
+                <Text style={[styles.channelText, otpChannel === 'mobile' && styles.channelTextActive]}>
+                  Send via SMS
+                </Text>
+              </TouchableOpacity>
+            </View>
 
             <TextInput
               style={styles.otpInput}
               placeholder="000000"
+              placeholderTextColor="#B8C0CC"
               keyboardType="numeric"
               maxLength={6}
               value={otpCode}
@@ -863,14 +962,31 @@ export default function RegisterScreen({ navigation }) {
               )}
             </TouchableOpacity>
 
+            {/* Resend Timer / Button */}
+            <View style={styles.resendRow}>
+              {resendCooldown > 0 ? (
+                <Text style={styles.resendCountdownText}>
+                  Resend code in <Text style={{ fontWeight: '700', color: colors.navyDark }}>{resendCooldown}s</Text>
+                </Text>
+              ) : (
+                <TouchableOpacity onPress={() => handleResendOtp(otpChannel)} disabled={resending}>
+                  <Text style={styles.resendActionText}>
+                    {resending ? 'Sending...' : 'Didn’t get code? Resend OTP'}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
             <TouchableOpacity
-              style={{ marginTop: 12 }}
+              style={{ marginTop: 14 }}
               onPress={() => setShowOtpModal(false)}
             >
-              <Text style={{ color: colors.slateGrey, fontSize: 13 }}>Cancel & Edit Details</Text>
+              <Text style={{ color: colors.slateGrey, fontSize: 13, textDecorationLine: 'underline' }}>
+                Cancel & Edit Details
+              </Text>
             </TouchableOpacity>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </KeyboardAvoidingView>
   );
@@ -1260,19 +1376,47 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     lineHeight: 18
   },
-  devOtpBadge: {
-    backgroundColor: '#FFFBEA',
-    borderWidth: 1,
-    borderColor: '#FDE68A',
-    borderRadius: 8,
+  channelRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 16
+  },
+  channelChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 6,
-    marginBottom: 14
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#F8FAFC'
   },
-  devOtpText: {
+  channelChipActive: {
+    borderColor: colors.goldPrimary,
+    backgroundColor: '#FFFBEA'
+  },
+  channelText: {
     fontSize: 12,
+    color: colors.slateGrey,
+    fontWeight: '600'
+  },
+  channelTextActive: {
+    color: colors.navyDark,
+    fontWeight: '700'
+  },
+  resendRow: {
+    marginTop: 14,
+    alignItems: 'center'
+  },
+  resendCountdownText: {
+    fontSize: 13,
+    color: colors.slateGrey
+  },
+  resendActionText: {
+    fontSize: 13,
     fontWeight: '700',
-    color: '#92400E'
+    color: colors.navyPrimary,
+    textDecorationLine: 'underline'
   },
   otpInput: {
     width: 200,
