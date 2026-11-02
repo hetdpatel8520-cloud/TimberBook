@@ -17,11 +17,31 @@ import SegmentedControl from '../../components/SegmentedControl';
 import PartyPickerModal from '../../components/PartyPickerModal';
 import { ledgersApi, vouchersApi } from '../../api/client';
 import { formatINR } from '../../utils/timberMath';
+import { useTranslation } from '../../i18n/LanguageContext';
+
+export const VOUCHER_TYPES = {
+  RECEIPT: 'receipt',
+  PAYMENT: 'payment',
+  CONTRA: 'contra'
+};
+
+function normalizeVoucherType(raw) {
+  if (!raw) return VOUCHER_TYPES.RECEIPT;
+  const lower = String(raw).toLowerCase().trim();
+  if (lower === 'payment') return VOUCHER_TYPES.PAYMENT;
+  if (lower === 'contra') return VOUCHER_TYPES.CONTRA;
+  return VOUCHER_TYPES.RECEIPT;
+}
 
 export default function VoucherEntryScreen({ route, navigation }) {
   const insets = useSafeAreaInsets();
-  const defaultType = route?.params?.defaultType || 'Receipt';
-  const [voucherType, setVoucherType] = useState(defaultType); // 'Receipt', 'Payment', 'Contra'
+  const { t } = useTranslation();
+
+  const initialType = normalizeVoucherType(
+    route?.params?.voucherType || route?.params?.initialType || route?.params?.defaultType
+  );
+
+  const [voucherType, setVoucherType] = useState(initialType);
   const [voucherNo, setVoucherNo] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [amount, setAmount] = useState('');
@@ -31,6 +51,7 @@ export default function VoucherEntryScreen({ route, navigation }) {
   // Accounts
   const [cashBankAccounts, setCashBankAccounts] = useState([]);
   const [partyAccounts, setPartyAccounts] = useState([]);
+  const [allLedgers, setAllLedgers] = useState([]);
 
   const [selectedCashBank, setSelectedCashBank] = useState(null);
   const [selectedParty, setSelectedParty] = useState(null);
@@ -40,56 +61,112 @@ export default function VoucherEntryScreen({ route, navigation }) {
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState({});
 
+  // C2: React dynamically to route parameter changes when navigated from Home
   useEffect(() => {
-    loadAccounts();
-    loadNextVoucherNo(voucherType);
+    const nextType = normalizeVoucherType(
+      route?.params?.voucherType || route?.params?.initialType || route?.params?.defaultType
+    );
+    if (nextType !== voucherType) {
+      applyVoucherType(nextType, true);
+    }
+  }, [route?.params?.voucherType, route?.params?.initialType, route?.params?.defaultType]);
+
+  // Initial and on-type change loader
+  useEffect(() => {
+    loadAccountsAndNextNo(voucherType);
   }, [voucherType]);
 
-  const loadAccounts = async () => {
+  const loadAccountsAndNextNo = async (type) => {
     try {
-      const [cbRes, allLedgersRes] = await Promise.all([
+      const [cbRes, allRes] = await Promise.all([
         ledgersApi.list({ type: 'cashbank' }),
         ledgersApi.list()
       ]);
 
-      if (cbRes.ledgers) {
-        setCashBankAccounts(cbRes.ledgers);
-        if (!selectedCashBank && cbRes.ledgers.length > 0) {
-          setSelectedCashBank(cbRes.ledgers[0]);
-        }
+      const cbList = cbRes.ledgers || [];
+      const allList = allRes.ledgers || [];
+
+      setCashBankAccounts(cbList);
+      setAllLedgers(allList);
+
+      // Default Cash/Bank account
+      if (cbList.length > 0) {
+        setSelectedCashBank(cbList[0]);
       }
 
-      if (allLedgersRes.ledgers) {
-        // Filter parties depending on voucher type
-        if (voucherType === 'Receipt') {
-          const debtors = allLedgersRes.ledgers.filter(l => /debtor/i.test(l.group));
-          setPartyAccounts(debtors);
-          if (debtors.length > 0) setSelectedParty(debtors[0]);
-        } else if (voucherType === 'Payment') {
-          const creditorsAndExp = allLedgersRes.ledgers.filter(l =>
-            /creditor/i.test(l.group) || /expense/i.test(l.group)
-          );
-          setPartyAccounts(creditorsAndExp);
-          if (creditorsAndExp.length > 0) setSelectedParty(creditorsAndExp[0]);
-        } else {
-          // Contra: another bank or cash account
-          setPartyAccounts(cbRes.ledgers || []);
-          if (cbRes.ledgers && cbRes.ledgers.length > 1) {
-            setSelectedParty(cbRes.ledgers[1]);
-          }
-        }
+      // Filter second account based on active type
+      configurePartiesForType(type, cbList, allList);
+
+      // Load Next Voucher Number
+      const numRes = await vouchersApi.getNextNumber(type);
+      if (numRes && numRes.nextVoucherNo) {
+        setVoucherNo(numRes.nextVoucherNo);
       }
     } catch (err) {
       console.warn('Voucher accounts load error:', err.message);
     }
   };
 
-  const loadNextVoucherNo = async (type) => {
-    try {
-      const res = await vouchersApi.getNextNumber(type);
-      if (res.nextVoucherNo) setVoucherNo(res.nextVoucherNo);
-    } catch (err) {
-      console.warn('Next voucher no error:', err.message);
+  const configurePartiesForType = (type, cbList, allList) => {
+    if (type === VOUCHER_TYPES.RECEIPT) {
+      // Debtors / Customers
+      const debtors = allList.filter((l) => /debtor/i.test(l.group));
+      const candidates = debtors.length > 0 ? debtors : allList.filter((l) => !/cash|bank/i.test(l.group));
+      setPartyAccounts(candidates);
+      setSelectedParty(candidates[0] || null);
+    } else if (type === VOUCHER_TYPES.PAYMENT) {
+      // Creditors / Suppliers / Expenses
+      const creditorsAndExp = allList.filter((l) =>
+        /creditor|expense|purchase/i.test(l.group)
+      );
+      const candidates = creditorsAndExp.length > 0 ? creditorsAndExp : allList.filter((l) => !/cash|bank/i.test(l.group));
+      setPartyAccounts(candidates);
+      setSelectedParty(candidates[0] || null);
+    } else {
+      // Contra: another Cash or Bank account
+      setPartyAccounts(cbList);
+      if (cbList.length > 1) {
+        setSelectedParty(cbList[1]);
+      } else {
+        setSelectedParty(null);
+      }
+    }
+  };
+
+  const applyVoucherType = (newType, resetForm = true) => {
+    setVoucherType(newType);
+    setErrors({});
+    if (resetForm) {
+      setAmount('');
+      setNarration('');
+    }
+    configurePartiesForType(newType, cashBankAccounts, allLedgers);
+    vouchersApi.getNextNumber(newType).then((res) => {
+      if (res && res.nextVoucherNo) setVoucherNo(res.nextVoucherNo);
+    }).catch(() => {});
+  };
+
+  const handleTabSwitch = (idx) => {
+    const types = [VOUCHER_TYPES.RECEIPT, VOUCHER_TYPES.PAYMENT, VOUCHER_TYPES.CONTRA];
+    const targetType = types[idx];
+    if (targetType === voucherType) return;
+
+    const hasData = amount.trim().length > 0 || narration.trim().length > 0;
+    if (hasData) {
+      Alert.alert(
+        'Switch Voucher Type?',
+        t('switchVoucherConfirm'),
+        [
+          { text: t('cancel'), style: 'cancel' },
+          {
+            text: t('confirm'),
+            style: 'destructive',
+            onPress: () => applyVoucherType(targetType, true)
+          }
+        ]
+      );
+    } else {
+      applyVoucherType(targetType, true);
     }
   };
 
@@ -106,31 +183,39 @@ export default function VoucherEntryScreen({ route, navigation }) {
       errs.amount = 'Please enter a valid amount greater than zero';
     }
     if (!selectedCashBank) {
-      errs.cashBank = 'Please select a cash/bank account';
+      errs.cashBank = 'Please select a source cash/bank account';
     }
     if (!selectedParty) {
-      errs.party = 'Please select a party/ledger account';
+      errs.party = voucherType === VOUCHER_TYPES.CONTRA ? 'Please select a destination account' : 'Please select a party/ledger account';
+    }
+
+    if (voucherType === VOUCHER_TYPES.CONTRA && selectedCashBank && selectedParty) {
+      const fromId = selectedCashBank._id || selectedCashBank.id;
+      const toId = selectedParty._id || selectedParty.id;
+      if (String(fromId) === String(toId)) {
+        errs.party = 'Source and Destination accounts cannot be the same';
+      }
     }
 
     if (Object.keys(errs).length > 0) {
       setErrors(errs);
-      Alert.alert('Incomplete Voucher', 'Please enter a valid positive amount and select both accounts.');
+      Alert.alert('Incomplete Voucher', Object.values(errs)[0]);
       return;
     }
 
     let fromAccountId, toAccountId;
-    if (voucherType === 'Receipt') {
+    if (voucherType === VOUCHER_TYPES.RECEIPT) {
       // Receipt: Debit Cash/Bank (toAccount), Credit Customer (fromAccount)
       toAccountId = selectedCashBank._id || selectedCashBank.id;
       fromAccountId = selectedParty._id || selectedParty.id;
-    } else if (voucherType === 'Payment') {
-      // Payment: Debit Party/Expense (toAccount), Credit Cash/Bank (fromAccount)
+    } else if (voucherType === VOUCHER_TYPES.PAYMENT) {
+      // Payment: Debit Supplier/Expense (toAccount), Credit Cash/Bank (fromAccount)
       toAccountId = selectedParty._id || selectedParty.id;
       fromAccountId = selectedCashBank._id || selectedCashBank.id;
     } else {
-      // Contra: Transfer from source to destination
-      fromAccountId = selectedCashBank._id || selectedCashBank.id;
+      // Contra: Debit Destination Account (toAccount), Credit Source Account (fromAccount)
       toAccountId = selectedParty._id || selectedParty.id;
+      fromAccountId = selectedCashBank._id || selectedCashBank.id;
     }
 
     try {
@@ -146,9 +231,10 @@ export default function VoucherEntryScreen({ route, navigation }) {
       });
 
       if (res.success) {
+        const typeTitle = voucherType === VOUCHER_TYPES.RECEIPT ? t('receipt') : voucherType === VOUCHER_TYPES.PAYMENT ? t('payment') : t('contra');
         Alert.alert(
           'Voucher Saved!',
-          `${voucherType} voucher #${res.voucher.voucherNo} of ₹${val.toLocaleString('en-IN')} has been posted to ledgers.`,
+          `${typeTitle} voucher #${res.voucher?.voucherNo || voucherNo} of ₹${val.toLocaleString('en-IN')} has been posted to ledgers.`,
           [{ text: 'OK', onPress: () => navigation.goBack() }]
         );
       }
@@ -159,18 +245,30 @@ export default function VoucherEntryScreen({ route, navigation }) {
     }
   };
 
-  const isReceipt = voucherType === 'Receipt';
-  const isPayment = voucherType === 'Payment';
-  const isContra = voucherType === 'Contra';
+  const isReceipt = voucherType === VOUCHER_TYPES.RECEIPT;
+  const isPayment = voucherType === VOUCHER_TYPES.PAYMENT;
+  const isContra = voucherType === VOUCHER_TYPES.CONTRA;
+
+  const headerTitle = isReceipt ? t('receiptEntry') : isPayment ? t('paymentEntry') : t('contraEntry');
+  const badgeText = isReceipt ? 'RECEIPT' : isPayment ? 'PAYMENT' : 'CONTRA';
+  const badgeColor = isReceipt ? '#2ECC71' : isPayment ? '#E74C3C' : '#3498DB';
+
+  const firstAccountLabel = isContra ? t('fromAccount') : isReceipt ? t('depositInto') : t('payFrom');
+  const secondAccountLabel = isContra ? t('toAccount') : isReceipt ? t('receivedFrom') : t('paidTo');
+
+  // For Contra destination picker, filter out first selected account
+  const filteredDestinationAccounts = isContra
+    ? cashBankAccounts.filter((a) => String(a._id || a.id) !== String(selectedCashBank?._id || selectedCashBank?.id))
+    : partyAccounts;
 
   return (
     <View style={styles.container}>
       <Header
-        title={`${voucherType} Entry`}
-        subtitle={voucherNo}
+        title={headerTitle}
+        subtitle={voucherNo || 'Generating voucher no...'}
         showBack
         onBack={() => navigation.goBack()}
-        badgeText={voucherType.toUpperCase()}
+        badgeText={badgeText}
       />
 
       <ScrollView
@@ -180,20 +278,17 @@ export default function VoucherEntryScreen({ route, navigation }) {
         ]}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Type Switcher at Top */}
+        {/* C4: Real Interactive Voucher Type Switcher */}
         <View style={styles.card}>
           <Text style={styles.fieldLabel}>VOUCHER TYPE</Text>
           <SegmentedControl
             options={['Receipt (Inward)', 'Payment (Outward)', 'Contra (Transfer)']}
             selectedIndex={isReceipt ? 0 : isPayment ? 1 : 2}
-            onChange={(idx) => {
-              const types = ['Receipt', 'Payment', 'Contra'];
-              setVoucherType(types[idx]);
-            }}
+            onChange={handleTabSwitch}
           />
         </View>
 
-        {/* Double-Entry Posting Preview Card */}
+        {/* C3: Double-Entry Posting Preview Card */}
         <View style={styles.accountingPreviewBox}>
           <View style={styles.previewCol}>
             <Text style={styles.previewLabel}>DEBIT (+) :</Text>
@@ -204,7 +299,7 @@ export default function VoucherEntryScreen({ route, navigation }) {
               minimumFontScale={0.8}
               maxFontSizeMultiplier={1.2}
             >
-              {isReceipt ? selectedCashBank?.name : selectedParty?.name || 'Account'}
+              {isReceipt ? (selectedCashBank?.name || 'Cash / Bank') : (selectedParty?.name || 'Party / Account')}
             </Text>
           </View>
           <Ionicons name="arrow-forward" size={16} color={colors.goldPrimary} />
@@ -217,7 +312,7 @@ export default function VoucherEntryScreen({ route, navigation }) {
               minimumFontScale={0.8}
               maxFontSizeMultiplier={1.2}
             >
-              {isReceipt ? selectedParty?.name : selectedCashBank?.name || 'Account'}
+              {isReceipt ? (selectedParty?.name || 'Customer / Party') : (selectedCashBank?.name || 'Cash / Bank')}
             </Text>
           </View>
         </View>
@@ -225,7 +320,7 @@ export default function VoucherEntryScreen({ route, navigation }) {
         {/* Account Pickers Card */}
         <View style={styles.card}>
           <Text style={[styles.fieldLabel, errors.cashBank && { color: colors.errorText }]}>
-            {isContra ? 'FROM CASH / BANK A/C *' : isReceipt ? 'DEPOSIT INTO (CASH / BANK) *' : 'PAID FROM (CASH / BANK) *'} {errors.cashBank ? `(${errors.cashBank})` : ''}
+            {firstAccountLabel.toUpperCase()} * {errors.cashBank ? `(${errors.cashBank})` : ''}
           </Text>
           <TouchableOpacity
             style={[styles.accountBtn, errors.cashBank && { borderColor: colors.errorText, borderWidth: 1 }]}
@@ -248,8 +343,8 @@ export default function VoucherEntryScreen({ route, navigation }) {
           </TouchableOpacity>
 
           {/* Opposite Account: Customer / Supplier / Transferee */}
-          <Text style={[styles.fieldLabel, { marginTop: 12 }, errors.party && { color: colors.errorText }]}>
-            {isContra ? 'TO CASH / BANK A/C *' : isReceipt ? 'RECEIVED FROM (CUSTOMER) *' : 'PAID TO (SUPPLIER / EXPENSE) *'} {errors.party ? `(${errors.party})` : ''}
+          <Text style={[styles.fieldLabel, { marginTop: 14 }, errors.party && { color: colors.errorText }]}>
+            {secondAccountLabel.toUpperCase()} * {errors.party ? `(${errors.party})` : ''}
           </Text>
           <TouchableOpacity
             style={[styles.accountBtn, errors.party && { borderColor: colors.errorText, borderWidth: 1 }]}
@@ -260,7 +355,7 @@ export default function VoucherEntryScreen({ route, navigation }) {
           >
             <View style={{ flex: 1 }}>
               <Text style={[styles.accountName, !selectedParty && { color: colors.placeholder }]}>
-                {selectedParty ? selectedParty.name : 'Select Party / Account...'}
+                {selectedParty ? selectedParty.name : isContra ? 'Select Destination Account...' : 'Select Party / Account...'}
               </Text>
               {selectedParty && (
                 <Text style={styles.accountBal}>
@@ -309,7 +404,7 @@ export default function VoucherEntryScreen({ route, navigation }) {
 
           <CustomInput
             label="Narration / Reference"
-            placeholder="e.g. Inward part payment against Bill #1001"
+            placeholder={isReceipt ? 'e.g. Inward part payment against Bill #1001' : isPayment ? 'e.g. Outward payment for timber purchase' : 'e.g. Cash withdrawal / Bank deposit'}
             value={narration}
             onChangeText={setNarration}
             containerStyle={{ marginTop: 12 }}
@@ -327,7 +422,7 @@ export default function VoucherEntryScreen({ route, navigation }) {
           ) : (
             <>
               <Ionicons name="checkmark-circle-outline" size={20} color={colors.white} style={{ marginRight: 6 }} />
-              <Text style={styles.saveBtnText}>Save {voucherType} Voucher</Text>
+              <Text style={styles.saveBtnText}>Save {badgeText} Voucher</Text>
             </>
           )}
         </TouchableOpacity>
@@ -339,16 +434,21 @@ export default function VoucherEntryScreen({ route, navigation }) {
         onClose={() => setShowCashBankPicker(false)}
         parties={cashBankAccounts}
         title="Select Cash / Bank Account"
-        onSelect={(acc) => setSelectedCashBank(acc)}
+        onSelect={(acc) => {
+          setSelectedCashBank(acc);
+          if (isContra && selectedParty && String(selectedParty._id || selectedParty.id) === String(acc._id || acc.id)) {
+            setSelectedParty(null);
+          }
+        }}
       />
 
       <PartyPickerModal
         visible={showPartyPicker}
         onClose={() => setShowPartyPicker(false)}
-        parties={partyAccounts}
+        parties={filteredDestinationAccounts}
         title={isContra ? 'Select Destination Account' : isReceipt ? 'Select Customer (Debtor)' : 'Select Supplier / Expense'}
         onSelect={(p) => setSelectedParty(p)}
-        onAddNew={() => navigation.navigate('LedgerForm')}
+        onAddNew={!isContra ? () => navigation.navigate('LedgerForm') : undefined}
       />
     </View>
   );

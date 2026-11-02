@@ -59,6 +59,18 @@ export const translations = {
     payment: 'Payment',
     contra: 'Contra',
 
+    // Voucher Form Labels & Titles
+    receiptEntry: 'Receipt Entry',
+    paymentEntry: 'Payment Entry',
+    contraEntry: 'Contra Entry',
+    depositInto: 'Deposit into (Cash / Bank)',
+    receivedFrom: 'Received from (Customer)',
+    payFrom: 'Pay from (Cash / Bank)',
+    paidTo: 'Paid to (Supplier / Expense)',
+    fromAccount: 'From Account (Cash / Bank)',
+    toAccount: 'To Account (Cash / Bank)',
+    switchVoucherConfirm: 'Switching voucher type will reset the entered details. Do you want to continue?',
+
     // Reports
     ledgerReport: 'Ledger Statement',
     cashBook: 'Cash Book',
@@ -153,6 +165,18 @@ export const translations = {
     payment: 'भुगतान (निकासी)',
     contra: 'कांट्रा (बैंक ↔ रोकड़)',
 
+    // Voucher Form Labels & Titles
+    receiptEntry: 'रसीद प्रविष्टि',
+    paymentEntry: 'भुगतान प्रविष्टि',
+    contraEntry: 'कांट्रा प्रविष्टि',
+    depositInto: 'जमा खाता (रोकड़ / बैंक)',
+    receivedFrom: 'प्राप्तकर्ता (ग्राहक / पार्टी)',
+    payFrom: 'भुगतान खाता (रोकड़ / बैंक)',
+    paidTo: 'भुगतान प्राप्तकर्ता (सप्लायर / खर्च)',
+    fromAccount: 'खाते से (रोकड़ / बैंक)',
+    toAccount: 'खाते में (रोकड़ / बैंक)',
+    switchVoucherConfirm: 'वाउचर का प्रकार बदलने पर दर्ज विवरण रीसेट हो जाएगा। क्या आप जारी रखना चाहते हैं?',
+
     // Reports
     ledgerReport: 'खाताबही विवरण',
     cashBook: 'रोकड़ बही',
@@ -246,6 +270,18 @@ export const translations = {
     receipt: 'પહોંચ (જમા)',
     payment: 'ચુકવણી (ઉધાર)',
     contra: 'કોન્ટ્રા (બેંક ↔ રોકડ)',
+
+    // Voucher Form Labels & Titles
+    receiptEntry: 'પહોંચ એન્ટ્રી',
+    paymentEntry: 'ચુકવણી એન્ટ્રી',
+    contraEntry: 'કોન્ટ્રા એન્ટ્રી',
+    depositInto: 'જમા ખાતું (રોકડ / બેંક)',
+    receivedFrom: 'ગ્રાહક પાસેથી મળેલ',
+    payFrom: 'ચુકવણી ખાતું (રોકડ / બેંક)',
+    paidTo: 'ચૂકવેલ (વેપારી / ખર્ચ)',
+    fromAccount: 'આ ખાતામાંથી (રોકડ / બેંક)',
+    toAccount: 'આ ખાતામાં (રોકડ / બેંક)',
+    switchVoucherConfirm: 'વાઉચર પ્રકાર બદલવાથી દાખલ કરેલી વિગતો રીસેટ થશે. શું તમે આગળ વધવા માંગો છો?',
 
     // Reports
     ledgerReport: 'ખાતાવહી સ્ટેટમેન્ટ',

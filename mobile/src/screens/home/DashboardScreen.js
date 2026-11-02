@@ -335,19 +335,19 @@ export default function DashboardScreen({ navigation }) {
             title: t('receipt'),
             subtitle: 'Customer Inflow',
             icon: 'arrow-down-circle',
-            onPress: () => navigation.navigate('VoucherEntry', { initialType: 'Receipt' })
+            onPress: () => navigation.navigate('VoucherEntry', { voucherType: 'receipt' })
           },
           {
             title: t('payment'),
             subtitle: 'Supplier Outflow',
             icon: 'arrow-up-circle',
-            onPress: () => navigation.navigate('VoucherEntry', { initialType: 'Payment' })
+            onPress: () => navigation.navigate('VoucherEntry', { voucherType: 'payment' })
           },
           {
             title: t('contra'),
             subtitle: 'Bank ↔ Cash',
             icon: 'swap-horizontal',
-            onPress: () => navigation.navigate('VoucherEntry', { initialType: 'Contra' })
+            onPress: () => navigation.navigate('VoucherEntry', { voucherType: 'contra' })
           }
         ])}
 

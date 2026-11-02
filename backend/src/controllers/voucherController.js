@@ -8,7 +8,11 @@ async function getVouchers(req, res, next) {
     const { type, accountId, startDate, endDate, search, limit = 50, page = 1 } = req.query;
     let query = { companyId: req.companyId };
 
-    if (type) query.type = type;
+    if (type) {
+      const normType = type.toLowerCase();
+      const standardType = normType.charAt(0).toUpperCase() + normType.slice(1);
+      query.$or = [{ type: standardType }, { type: normType }];
+    }
 
     if (accountId) {
       query.$or = [{ fromAccountId: accountId }, { toAccountId: accountId }];
@@ -54,29 +58,36 @@ async function getVouchers(req, res, next) {
 
 async function getNextVoucherNo(req, res, next) {
   try {
-    const { type } = req.params; // Receipt, Payment, Contra
+    const { type } = req.params; // receipt, payment, contra or capitalized
+    const normType = (type || '').toLowerCase();
+
+    let prefix = 'REC';
+    let counterKey = 'receipt';
+    let standardType = 'Receipt';
+
+    if (normType === 'payment') {
+      prefix = 'PAY';
+      counterKey = 'payment';
+      standardType = 'Payment';
+    } else if (normType === 'contra') {
+      prefix = 'CON';
+      counterKey = 'contra';
+      standardType = 'Contra';
+    }
+
     const fy = await FinancialYear.findOne({ companyId: req.companyId, isCurrent: true }) ||
       await FinancialYear.findOne({ companyId: req.companyId });
     const shortYear = (fy?.code || '26-27').split('-').map(y => y.slice(-2)).join('-');
 
-    let prefix = 'REC';
-    let counterKey = 'receipt';
-    if (type === 'Payment') {
-      prefix = 'PAY';
-      counterKey = 'payment';
-    } else if (type === 'Contra') {
-      prefix = 'CON';
-      counterKey = 'contra';
-    }
-
-    const counter = fy?.counters?.[counterKey] || 101;
+    const counter = fy?.counters?.[counterKey] || 1;
     const nextVoucherNo = `${prefix}/${shortYear}/${counter}`;
 
     res.json({
       success: true,
       nextVoucherNo,
       counter,
-      type
+      type: standardType,
+      prefix
     });
   } catch (err) {
     next(err);
@@ -86,7 +97,7 @@ async function getNextVoucherNo(req, res, next) {
 async function createVoucher(req, res, next) {
   try {
     const {
-      type, // 'Receipt', 'Payment', 'Contra'
+      type, // 'receipt', 'payment', 'contra' or capitalized
       date = new Date(),
       fromAccountId, // Account being Credited
       toAccountId,   // Account being Debited
@@ -97,9 +108,12 @@ async function createVoucher(req, res, next) {
       chequeDate
     } = req.body;
 
-    if (!type || !['Receipt', 'Payment', 'Contra'].includes(type)) {
+    const normType = (type || '').toLowerCase();
+    if (!['receipt', 'payment', 'contra'].includes(normType)) {
       return res.status(400).json({ success: false, message: 'Valid voucher type (Receipt, Payment, Contra) is required.' });
     }
+
+    const standardType = normType.charAt(0).toUpperCase() + normType.slice(1);
 
     if (!fromAccountId || !toAccountId) {
       return res.status(400).json({ success: false, message: 'Both Source and Destination accounts are required.' });
@@ -128,21 +142,21 @@ async function createVoucher(req, res, next) {
 
     let prefix = 'REC';
     let counterKey = 'receipt';
-    if (type === 'Payment') {
+    if (normType === 'payment') {
       prefix = 'PAY';
       counterKey = 'payment';
-    } else if (type === 'Contra') {
+    } else if (normType === 'contra') {
       prefix = 'CON';
       counterKey = 'contra';
     }
 
-    const counter = fy?.counters?.[counterKey] || 101;
+    const counter = fy?.counters?.[counterKey] || 1;
     const shortYear = (fy?.code || '26-27').split('-').map(y => y.slice(-2)).join('-');
     const voucherNo = `${prefix}/${shortYear}/${counter}`;
 
     const voucher = await Voucher.create({
       companyId: req.companyId,
-      type,
+      type: standardType,
       voucherNo,
       date: new Date(date),
       fromAccountId: fromAccount._id,
@@ -162,13 +176,16 @@ async function createVoucher(req, res, next) {
 
     // Increment FY counter
     if (fy) {
+      if (!fy.counters) {
+        fy.counters = { invoice: 1, purchase: 1, receipt: 1, payment: 1, contra: 1 };
+      }
       fy.counters[counterKey] = counter + 1;
       await fy.save();
     }
 
     res.status(201).json({
       success: true,
-      message: `${type} voucher recorded successfully.`,
+      message: `${standardType} voucher recorded successfully.`,
       voucher
     });
   } catch (err) {
