@@ -3,22 +3,22 @@
  * Serves version manifest for native APK checks and over-the-air updates.
  */
 
-// Default metadata for TimberBooks v1.0.3
+// Default metadata for TimberBooks v1.0.4
 const APP_VERSION_CONFIG = {
-  latestVersion: process.env.APP_LATEST_VERSION || '1.0.3',
-  latestVersionCode: parseInt(process.env.APP_LATEST_VERSION_CODE || '5', 10),
+  latestVersion: process.env.APP_LATEST_VERSION || '1.0.4',
+  latestVersionCode: parseInt(process.env.APP_LATEST_VERSION_CODE || '6', 10),
   minSupportedVersion: '1.0.0',
   minSupportedVersionCode: 1,
   mandatory: false,
-  releaseDate: '2026-11-02',
+  releaseDate: '2026-11-03',
   releaseNotes: [
-    'Pixel-perfect layout across all phone screen sizes and tablets.',
-    'Complete safe-area insets & solid status bar on Android and iOS.',
-    'Timber dimension 2x2 grid adaptation on compact phone screens.',
-    'Balanced Quick Entry tile grid with zero empty spaces.',
-    'Direct in-app update checks & EAS over-the-air (OTA) updates.'
+    'Multi-Company Support: One owner can now manage multiple companies/saw mills.',
+    'Company Switcher: Tap company name on dashboard to switch businesses instantly.',
+    'Vouchers fix: Receipt, Payment, and Contra each have distinct screens and counters.',
+    'Real OTP delivery: Secure email & SMS verification without on-screen codes.',
+    'Pixel-perfect layout across all phone screen sizes and safe areas.'
   ].join('\n'),
-  apkUrl: process.env.APP_APK_URL || 'https://expo.dev/artifacts/eas/If8waEjmvIok-6MCmC1Z1fuZkNFUhIIwBzXldxiPBdY.apk',
+  apkUrl: process.env.APP_APK_URL || 'https://expo.dev/artifacts/eas/uER7B45Es_GimKV22ybkH36JdTmVn7T4fDibee75JNk.apk',
   easProjectId: 'eb6e72c1-c8c7-45e2-a2b1-8538123945f5',
   channel: 'production'
 };
