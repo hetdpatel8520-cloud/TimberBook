@@ -17,6 +17,24 @@ import { useAuth } from '../../context/AuthContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import CustomInput from '../../components/CustomInput';
 
+function computeMaskedIdentifier(val) {
+  if (!val) return 'your registered email/mobile';
+  const clean = String(val).trim();
+  if (clean.includes('@')) {
+    const parts = clean.split('@');
+    const user = parts[0];
+    const domain = parts[1];
+    if (user.length <= 2) return `${user[0]}*@${domain}`;
+    return `${user[0]}${'*'.repeat(Math.max(1, user.length - 2))}${user[user.length - 1]}@${domain}`;
+  }
+  const digits = clean.replace(/[^0-9]/g, '');
+  if (digits.length >= 10) {
+    const last10 = digits.slice(-10);
+    return `${last10.substring(0, 2)}${'*'.repeat(5)}${last10.slice(-3)}`;
+  }
+  return clean || 'your registered email/mobile';
+}
+
 export default function ForgotPasswordScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const { forgotPassword, resetPassword } = useAuth();
@@ -30,37 +48,63 @@ export default function ForgotPasswordScreen({ navigation }) {
   const [newPin, setNewPin] = useState('');
 
   const [loading, setLoading] = useState(false);
+  const [targetMasked, setTargetMasked] = useState('');
+  const [resendCooldown, setResendCooldown] = useState(30);
+  const [resending, setResending] = useState(false);
+
+  useEffect(() => {
+    let timer;
+    if (stage === 2 && resendCooldown > 0) {
+      timer = setInterval(() => {
+        setResendCooldown((prev) => (prev > 0 ? prev - 1 : 0));
+      }, 1000);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [stage, resendCooldown]);
 
   const handleRequestOtp = async () => {
-    if (!identifier.trim()) {
+    const cleanId = (identifier || '').trim();
+    if (!cleanId) {
       Alert.alert('Required', 'Please enter your registered mobile number or email.');
       return;
     }
 
     try {
       setLoading(true);
-      const res = await forgotPassword(identifier.trim());
-      setTargetMasked(res.targetMasked || identifier.trim());
+      const res = await forgotPassword(cleanId);
+      const displayTarget = res?.targetMasked || res?.maskedTarget || computeMaskedIdentifier(cleanId);
+      setTargetMasked(displayTarget);
       setResendCooldown(30);
       setOtp('');
       setStage(2);
     } catch (err) {
-      Alert.alert('Request Failed', err.message || 'Account not found matching this contact.');
+      console.error('[FORGOT_PASSWORD_REQUEST_ERROR]', err);
+      const msg = err?.message || '';
+      if (msg.toLowerCase().includes('no account') || msg.toLowerCase().includes('not found') || msg.toLowerCase().includes('matching')) {
+        Alert.alert('Account Not Found', 'No account found matching this mobile number or email. Please check or register.');
+      } else {
+        Alert.alert('Notice', 'Could not send the verification code. Please check your connection and try again.');
+      }
     } finally {
       setLoading(false);
     }
   };
 
   const handleResendOtp = async () => {
-    if (resendCooldown > 0) return;
+    if (resendCooldown > 0 || resending) return;
+    const cleanId = (identifier || '').trim();
     try {
       setResending(true);
-      const res = await forgotPassword(identifier.trim());
-      setTargetMasked(res.targetMasked || identifier.trim());
+      const res = await forgotPassword(cleanId);
+      const displayTarget = res?.targetMasked || res?.maskedTarget || computeMaskedIdentifier(cleanId);
+      setTargetMasked(displayTarget);
       setResendCooldown(30);
-      Alert.alert('Code Sent', 'A new verification code has been sent to ' + (res.targetMasked || identifier.trim()));
+      Alert.alert('Code Sent', 'A new verification code has been sent to ' + displayTarget);
     } catch (err) {
-      Alert.alert('Resend Failed', err.message || 'Could not resend OTP.');
+      console.error('[FORGOT_PASSWORD_RESEND_ERROR]', err);
+      Alert.alert('Notice', 'Could not resend the code, please try again.');
     } finally {
       setResending(false);
     }
@@ -107,7 +151,8 @@ export default function ForgotPasswordScreen({ navigation }) {
         ]
       );
     } catch (err) {
-      Alert.alert('Reset Failed', err.message || 'Could not reset password.');
+      console.error('[RESET_PASSWORD_ERROR]', err);
+      Alert.alert('Reset Failed', err.message || 'Could not reset password. Please check your verification code.');
     } finally {
       setLoading(false);
     }
@@ -182,15 +227,18 @@ export default function ForgotPasswordScreen({ navigation }) {
             <View>
               <Text style={styles.cardTitle}>Enter OTP & New Password</Text>
               <Text style={styles.cardSubtitle}>
-                Enter the 6-digit code sent to {targetMasked || identifier} and create your new login password or Quick PIN.
+                Enter the 6-digit code sent to{' '}
+                <Text style={{ fontWeight: '700', color: colors.navyDark }}>
+                  {targetMasked || computeMaskedIdentifier(identifier)}
+                </Text>{' '}
+                and create your new login password or Quick PIN.
               </Text>
-
-              
 
               <Text style={styles.fieldLabel}>6-DIGIT OTP CODE *</Text>
               <TextInput
                 style={styles.otpInput}
                 placeholder="000000"
+                placeholderTextColor="#B8C0CC"
                 keyboardType="numeric"
                 maxLength={6}
                 value={otp}
@@ -198,9 +246,25 @@ export default function ForgotPasswordScreen({ navigation }) {
                 autoFocus
               />
 
+              {/* Resend Cooldown / Action */}
+              <View style={styles.resendRow}>
+                {resendCooldown > 0 ? (
+                  <Text style={styles.resendCountdownText}>
+                    Resend code in <Text style={{ fontWeight: '700', color: colors.navyDark }}>{resendCooldown}s</Text>
+                  </Text>
+                ) : (
+                  <TouchableOpacity onPress={handleResendOtp} disabled={resending}>
+                    <Text style={styles.resendActionText}>
+                      {resending ? 'Sending...' : 'Didn’t receive code? Resend OTP'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+
               <CustomInput
                 label="New Password (min 6 chars)"
                 placeholder="••••••••"
+                placeholderTextColor="#B8C0CC"
                 value={newPassword}
                 onChangeText={setNewPassword}
                 secureTextEntry
@@ -210,6 +274,7 @@ export default function ForgotPasswordScreen({ navigation }) {
               <CustomInput
                 label="Confirm New Password"
                 placeholder="••••••••"
+                placeholderTextColor="#B8C0CC"
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
                 secureTextEntry
@@ -219,6 +284,7 @@ export default function ForgotPasswordScreen({ navigation }) {
               <CustomInput
                 label="New Quick PIN (Optional, 4-6 digits)"
                 placeholder="e.g. 1234"
+                placeholderTextColor="#B8C0CC"
                 value={newPin}
                 onChangeText={(v) => setNewPin(v.replace(/[^0-9]/g, ''))}
                 keyboardType="numeric"

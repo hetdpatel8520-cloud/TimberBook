@@ -299,13 +299,14 @@ export default function RegisterScreen({ navigation }) {
         channel: targetChannel
       });
 
-      const displayTarget = res.targetMasked || (targetChannel === 'email' ? maskEmail(form.email) : maskMobile(form.mobile));
+      const displayTarget = res?.targetMasked || res?.maskedTarget || (targetChannel === 'email' ? maskEmail(form.email) : maskMobile(form.mobile)) || 'your contact';
       setTargetMasked(displayTarget);
       setResendCooldown(30);
       setOtpCode('');
       setShowOtpModal(true);
     } catch (err) {
-      Alert.alert('OTP Request Error', err.message || 'Could not send verification OTP.');
+      console.error('[REGISTER_SEND_OTP_ERROR]', err);
+      Alert.alert('Notice', 'Could not send verification code. Please check your network and try again.');
     } finally {
       setLoading(false);
     }
@@ -323,12 +324,13 @@ export default function RegisterScreen({ navigation }) {
         channel: ch
       });
       if (channelToUse) setOtpChannel(channelToUse);
-      const displayTarget = res.targetMasked || (ch === 'email' ? maskEmail(form.email) : maskMobile(form.mobile));
+      const displayTarget = res?.targetMasked || res?.maskedTarget || (ch === 'email' ? maskEmail(form.email) : maskMobile(form.mobile)) || 'your contact';
       setTargetMasked(displayTarget);
       setResendCooldown(30);
       Alert.alert('Code Sent', 'A new 6-digit verification code has been sent to ' + displayTarget);
     } catch (err) {
-      Alert.alert('Resend Failed', err.message || 'Could not resend OTP.');
+      console.error('[REGISTER_RESEND_OTP_ERROR]', err);
+      Alert.alert('Notice', 'Could not resend code, please try again.');
     } finally {
       setResending(false);
     }

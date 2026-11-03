@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { LanguageProvider } from './src/i18n/LanguageContext';
 import { AuthProvider } from './src/context/AuthContext';
 import RootNavigator from './src/navigation/RootNavigator';
+import ErrorBoundary from './src/components/ErrorBoundary';
 import { checkAllUpdates } from './src/services/updateService';
 import { initApiUrl } from './src/api/client';
 import { colors } from './src/theme/colors';
@@ -35,14 +36,16 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <QueryClientProvider client={queryClient}>
-        <LanguageProvider>
-          <AuthProvider>
-            <StatusBar style="light" backgroundColor={colors.navyDark} />
-            <RootNavigator />
-          </AuthProvider>
-        </LanguageProvider>
-      </QueryClientProvider>
+      <ErrorBoundary>
+        <QueryClientProvider client={queryClient}>
+          <LanguageProvider>
+            <AuthProvider>
+              <StatusBar style="light" backgroundColor={colors.navyDark} />
+              <RootNavigator />
+            </AuthProvider>
+          </LanguageProvider>
+        </QueryClientProvider>
+      </ErrorBoundary>
     </SafeAreaProvider>
   );
 }
